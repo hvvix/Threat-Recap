@@ -14,7 +14,7 @@ Threat Recap reads about 100 security news sites, research blogs and official ad
 ## What's on it
 
 - **Latest news**: headlines from security news, vendor research teams and government advisories, merged into stories.
-- **Morning brief**: what changed since your last visit.
+- **Daily brief**: the last 24 hours at a glance, dated in your own time zone.
 - **Vulnerabilities**: new and actively exploited CVEs (CISA KEV), exploitation likelihood (EPSS), public proof-of-concept code, how to fix each one, and a "patch first" list ranked by real-world risk.
 - **Top of the decade**: the vulnerabilities that defined the last ten years, from EternalBlue and Log4Shell to this year's biggest.
 - **Ransomware tracker**: claims by group, country and sector, with a live world map. These are claims posted by criminal groups, not verified facts.

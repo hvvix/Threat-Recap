@@ -498,40 +498,41 @@ function applyTheme(mode) {
 function renderBrief() {
   const el = $('#brief');
   if (state.tab !== 'latest' || state.q) { el.hidden = true; briefCache = ''; return; }
-  const now = Date.now(), since = sinceVisit;
+  // One daily brief: the last 24 hours up to now, headed with the visitor's own local date,
+  // so it reads the same at any hour in any time zone.
+  const now = Date.now(), since = now - DAY;
   const S = D.news.stories;
-  // Published since the last visit (first-seen alone would count a brand-new source's whole backlog).
-  const fresh = S.filter(s => !s.b && !s.so && s.d > since && s.f > since);
-  const day = S.filter(s => !s.b && !s.so && now - s.d < DAY);
+  const day = S.filter(s => !s.b && !s.so && s.d > since);
+  // New since the last visit (first-seen too, so a brand-new source's backlog doesn't count).
+  const fresh = S.filter(s => !s.b && !s.so && s.d > sinceVisit && s.f > sinceVisit);
   const top = day.slice().sort((a, b) => b.r.length - a.r.length)[0];
   const kevNew = (D.cves.kev || []).filter(k => Date.parse(k.d + 'T23:59:59Z') > since);
-  const breaches = fresh.filter(s => s.tg.includes('breach')).sort((a, b) => b.r.length - a.r.length);
-  const zd = fresh.filter(s => s.tg.includes('zeroday')).sort((a, b) => b.r.length - a.r.length);
+  const breaches = day.filter(s => s.tg.includes('breach')).sort((a, b) => b.r.length - a.r.length);
+  const zd = day.filter(s => s.tg.includes('zeroday')).sort((a, b) => b.r.length - a.r.length);
   const rwSince = D.rw ? D.rw.recent.filter(v => v.d > since).length : null;
-  const mine = fresh.filter(isMine);
-  const hrs = Math.max(1, Math.round((now - since) / HOUR));
-  const sinceLabel = hrs >= 48 ? `${Math.round(hrs / 24)} days` : `${hrs} hour${hrs > 1 ? 's' : ''}`;
+  const mine = day.filter(isMine);
   const kevText = kevNew.slice(0, 3).map(k => `<button class="linkish" data-cve="${k.id}">${esc(k.v)} ${esc(k.p)}</button>`).join(', ');
   const otd = todayInHistory();
+  const dateLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
   const lines = [
-    `<li><strong>${fresh.length}</strong> new ${fresh.length === 1 ? 'story' : 'stories'}${mine.length ? `, <button class="linkish" data-tab-go="mystack"><strong>${mine.length}</strong> about your stack</button>` : ''}.</li>`,
+    `<li><strong>${day.length}</strong> ${day.length === 1 ? 'story' : 'stories'} in the last 24 hours${mine.length ? `, <button class="linkish" data-tab-go="mystack"><strong>${mine.length}</strong> about your stack</button>` : ''}${fresh.length && fresh.length < day.length ? ` · <strong>${fresh.length}</strong> new since your last visit (<button class="linkish" id="brief-reset" title="Count new stories from now on">mark as seen</button>)` : ''}.</li>`,
     kevNew.length ? `<li><strong>${kevNew.length}</strong> newly exploited ${kevNew.length === 1 ? 'vulnerability' : 'vulnerabilities'} added to CISA KEV: ${kevText}${kevNew.length > 3 ? ` <button class="linkish" data-tab-go="cves" data-sub="kev">+${kevNew.length - 3} more</button>` : ''}.</li>` : `<li>No new entries in CISA's exploited-vulnerabilities list.</li>`,
     zd.length ? `<li><strong>${zd.length}</strong> zero-day / active-exploitation ${zd.length === 1 ? 'story' : 'stories'}, led by <a href="${url(zd[0].u)}" target="_blank" rel="noopener">${esc(zd[0].t)}</a>.</li>` : '',
     breaches.length ? `<li><strong>${breaches.length}</strong> breach ${breaches.length === 1 ? 'report' : 'reports'}, including <a href="${url(breaches[0].u)}" target="_blank" rel="noopener">${esc(breaches[0].t)}</a>.</li>` : '',
     rwSince != null ? `<li><strong>${rwSince}</strong> new ransomware leak-site claims.</li>` : '',
-    top ? `<li>Most covered today (${top.r.length + 1} outlets): <a href="${url(top.u)}" target="_blank" rel="noopener">${esc(top.t)}</a>.</li>` : '',
+    top ? `<li>Most covered (${top.r.length + 1} outlets): <a href="${url(top.u)}" target="_blank" rel="noopener">${esc(top.t)}</a>.</li>` : '',
     otd ? `<li class="muted">On this day in ${otd.y}: <a href="${url(otd.u)}" target="_blank" rel="noopener">${esc(otd.t)}</a>.</li>` : '',
   ].filter(Boolean).join('');
   // Collapsed by default on phones so the news is visible straight away.
   const open = el.querySelector('details') ? el.querySelector('details').open : innerWidth > 640;
-  el.innerHTML = `<details class="morning" ${open ? 'open' : ''}><summary class="morning-head"><h2>${greeting()} <span class="muted" style="font-weight:500">· ${fresh.length} new since ${sinceLabel} ago</span></h2></summary>
-      <ul>${lines}</ul><button class="linkish" id="brief-reset" title="Start the brief from now on your next visit" style="font-size:13px;margin-top:6px">Mark all as seen</button></details>`;
-  briefCache = `<h2>${greeting()}</h2><div class="mini" style="margin:-4px 0 8px">Since your last visit ${sinceLabel} ago · <button class="linkish" id="brief-reset">Mark all as seen</button></div><ul>${lines}</ul>`;
+  el.innerHTML = `<details class="morning" ${open ? 'open' : ''}><summary class="morning-head"><h2>Daily brief <span class="muted" style="font-weight:500">· ${esc(dateLabel)}</span></h2></summary>
+      <ul>${lines}</ul></details>`;
+  briefCache = `<h2>Daily brief</h2><div class="mini" style="margin:-4px 0 8px">${esc(dateLabel)} · the last 24 hours</div><ul>${lines}</ul>`;
   el.hidden = false;
 }
-const greeting = () => { const h = new Date().getHours(); return h < 5 ? 'Late night brief' : h < 12 ? 'Morning brief' : h < 18 ? 'Afternoon brief' : 'Evening brief'; };
 function todayInHistory() {
-  const md = new Date().toISOString().slice(5, 10);
+  // The visitor's local date, not UTC, so "on this day" matches their calendar.
+  const t = new Date(), md = `${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
   return D.otd.find(e => e.md === md) || null;
 }
 
