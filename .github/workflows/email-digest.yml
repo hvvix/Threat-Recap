@@ -1,14 +1,15 @@
 name: email-digest
 
 # Emails for subscribers (Buttondown). Everyone who subscribes gets both:
-#   weekly digest  - every Wednesday 13:00 UTC
-#   monthly recap  - the 1st of each month 06:00 UTC, covering the month that just ended
+#   weekly digest  - every Wednesday 13:17 UTC
+#   monthly recap  - the 1st of each month 06:23 UTC, covering the month that just ended
+# (Odd minutes on purpose: GitHub's scheduler delays or drops runs at busy times like :00.)
 # Emails are saved as drafts in Buttondown unless the DIGEST_AUTOSEND variable is "true".
 # Nothing runs until the BUTTONDOWN_USER variable is set.
 on:
   schedule:
-    - cron: "0 13 * * 3"
-    - cron: "0 6 1 * *"
+    - cron: "17 13 * * 3"
+    - cron: "23 6 1 * *"
   workflow_dispatch:
     inputs:
       kind:
@@ -30,7 +31,7 @@ jobs:
     timeout-minutes: 20
     if: ${{ vars.BUTTONDOWN_USER != '' }}
     env:
-      KIND: ${{ inputs.kind || (github.event.schedule == '0 6 1 * *' && 'monthly') || 'weekly' }}
+      KIND: ${{ inputs.kind || (github.event.schedule == '23 6 1 * *' && 'monthly') || 'weekly' }}
       HIDE_SECTIONS: ${{ vars.HIDE_SECTIONS || 'plugins' }}
     steps:
       - uses: actions/checkout@v4

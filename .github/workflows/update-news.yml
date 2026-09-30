@@ -1,9 +1,10 @@
 name: update-news
 
 # Rebuilds the data every 20 minutes and publishes public/ to GitHub Pages.
+# Runs at :07, :27 and :47: GitHub's scheduler is busiest (and delays or drops runs) on the hour marks.
 on:
   schedule:
-    - cron: "*/20 * * * *"
+    - cron: "7,27,47 * * * *"
   workflow_dispatch:
   push:
     branches: [main]
