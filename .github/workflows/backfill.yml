@@ -8,8 +8,10 @@ on:
 permissions:
   contents: read
 
+# Runs alongside the regular updates instead of blocking them for hours. It saves its
+# own copy of cache/ at the end, and the next regular update picks that copy up.
 concurrency:
-  group: update-news
+  group: backfill
   cancel-in-progress: false
 
 jobs:
