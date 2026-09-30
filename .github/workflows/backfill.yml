@@ -1,7 +1,7 @@
 name: backfill
 
 # One-off: rebuild this year's news history from the Wayback Machine and download
-# every CVE of the year. Run it once from the Actions tab; it takes about an hour.
+# every CVE of the year. Run it once from the Actions tab; it takes about 5 hours (mostly polite, rate-limited Wayback Machine requests).
 on:
   workflow_dispatch:
 
@@ -17,7 +17,7 @@ concurrency:
 jobs:
   backfill:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 350   # GitHub's limit is 6 hours; the backfill saves progress and resumes if cut off
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
