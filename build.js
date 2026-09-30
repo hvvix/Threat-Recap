@@ -687,8 +687,8 @@ async function main() {
   let icons = {};
   try { icons = await syncIcons(sources); log(`Site icons: ${Object.keys(icons).length}`); } catch (e) { log('Icons failed:', e.message); }
   await writeJSON(path.join(OUT, 'sources.json'), { generated, sources: sources.map(s => ({ n: s.name, c: s.cat, site: s.site, feed: s.feed || null, ic: icons[s.name], via: s.via, ...(st[s.name] ? { ok: st[s.name].ok, count: st[s.name].count, latest: st[s.name].latest, err: st[s.name].err } : {}) })) });
-  await writeDigestPage({ stories: stories.filter(s => !s.so), kevList, info, epss, ransomware });
   try { const t = await writeArchive({ root: ROOT, items, recent, kevList, ransomwareYear: ransomware?.year, hibpAll, sources, clip }); log(`Archive: ${t.news} news items, ${t.cves} CVEs, ${t.rw} ransomware claims, ${t.kev} KEV, ${t.hibp} HIBP this year`); } catch (e) { log('Archive failed:', e.message); }
+  await writeDigestPage({ stories: stories.filter(s => !s.so), kevList, info, epss, ransomware }); // after the archive: the monthly recap reads it
   const pages = await writeSite({ root: ROOT, stories, kevList, info, ransomware, incidents, siteUrl: process.env.SITE_URL || '' });
   log(`Static pages: ${pages}`);
   log(`Done in ${((Date.now() - t0) / 1000).toFixed(1)}s`);

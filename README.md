@@ -27,6 +27,7 @@ Threat Recap reads about 100 security news sites, research blogs and official ad
 
 - **RSS feeds** for every section, vendor and threat actor, to use in a feed reader, Slack or Teams.
 - **Free JSON data** with no sign-up. See the [API page](https://hvvix.github.io/Threat-Recap/api.html).
+- **The recap by email** (optional): a weekly digest and a monthly recap. Sign up at the bottom of the site.
 - Installs as an app on phones and desktops, and works offline.
 
 ## Good to know

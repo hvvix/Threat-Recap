@@ -502,6 +502,8 @@ footer a { text-decoration: underline; text-decoration-color: var(--line-strong)
 footer form { display: flex; gap: 6px; flex-wrap: wrap; }
 footer input[type=email] { padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--surface); min-width: 0; width: 240px; max-width: 100%; }
 footer button { padding: 8px 16px; border-radius: 4px; border: 0; background: var(--text); color: var(--bg); cursor: pointer; font-weight: 600; }
+footer .nl-opt { color: var(--muted); font-weight: 400; }
+footer .nl-desc { margin: 4px 0 8px; max-width: 380px; }
 .crumbs { font-size: 14px; display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--muted); margin-left: auto; }
 main.wrap { padding-block: 32px 64px; }
 main.wrap > h1, main.wrap .panel h1 { font: 700 34px/1.15 var(--serif); letter-spacing: -.02em; }

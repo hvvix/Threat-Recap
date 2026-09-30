@@ -1,11 +1,21 @@
-name: weekly-digest
+name: email-digest
 
-# Every Wednesday 13:00 UTC: build fresh data and send the digest to Buttondown.
-# Saved as a draft unless the DIGEST_AUTOSEND variable is "true".
+# Emails for subscribers (Buttondown). Everyone who subscribes gets both:
+#   weekly digest  - every Wednesday 13:00 UTC
+#   monthly recap  - the 1st of each month 06:00 UTC, covering the month that just ended
+# Emails are saved as drafts in Buttondown unless the DIGEST_AUTOSEND variable is "true".
+# Nothing runs until the BUTTONDOWN_USER variable is set.
 on:
   schedule:
     - cron: "0 13 * * 3"
+    - cron: "0 6 1 * *"
   workflow_dispatch:
+    inputs:
+      kind:
+        description: Which email to create
+        type: choice
+        options: [weekly, monthly]
+        default: weekly
 
 permissions:
   contents: read
@@ -19,6 +29,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: ${{ vars.BUTTONDOWN_USER != '' }}
+    env:
+      KIND: ${{ inputs.kind || (github.event.schedule == '0 6 1 * *' && 'monthly') || 'weekly' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -33,7 +45,8 @@ jobs:
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: node digest.js
+          SITE_URL: ${{ vars.SITE_URL }}
+      - run: node digest.js --$KIND
         env:
           BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
           DIGEST_AUTOSEND: ${{ vars.DIGEST_AUTOSEND }}

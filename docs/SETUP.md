@@ -29,9 +29,9 @@ It then updates itself every 20 minutes. GitHub pauses scheduled workflows in re
 | `NVD_API_KEY` | Secret | Free key from [NVD](https://nvd.nist.gov/developers/request-an-api-key). Makes CVE fetching faster and more reliable. |
 | `ANTHROPIC_API_KEY` | Secret | Turns on one-line AI "why it matters" notes for up to 30 widely covered stories per run. That's roughly a few cents a day; leave it unset to stay completely free. |
 | `GOATCOUNTER` | Variable | Your [GoatCounter](https://www.goatcounter.com) code for privacy-friendly visitor counts (no cookies). |
-| `BUTTONDOWN_USER` | Variable | Your [Buttondown](https://buttondown.com) username. Shows the email signup box and enables the weekly digest workflow. |
-| `BUTTONDOWN_API_KEY` | Secret | Buttondown API key, used to create the weekly email. |
-| `DIGEST_AUTOSEND` | Variable | `true` sends the digest automatically. Otherwise it's saved as a draft. |
+| `BUTTONDOWN_USER` | Variable | Your [Buttondown](https://buttondown.com) username. Shows the optional email signup box and turns on the `email-digest` workflow: a weekly digest every Wednesday and a monthly recap on the 1st (everyone who subscribes gets both). |
+| `BUTTONDOWN_API_KEY` | Secret | Buttondown API key, used to create the emails. |
+| `DIGEST_AUTOSEND` | Variable | `true` sends the emails automatically. Otherwise each one is saved as a draft in Buttondown for you to review and send. |
 
 ### Your own domain
 
@@ -74,7 +74,7 @@ Have I Been Pwned ─────────────►    breaches.json
 GitHub Advisory Database ──────►    supply.json
 world-atlas ───────────────────►    world.json          map shapes (built once)
                      site.js ─► public/actors|vendors|groups/*.html, feeds/*.xml, sitemap.xml
-                   digest.js ─► public/digest.html
+                   digest.js ─► public/digest.html (this week), public/monthly.html (last month)
 public/index.html + app.js read those files; no server code or database.
 ```
 
