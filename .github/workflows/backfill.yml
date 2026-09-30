@@ -1,0 +1,36 @@
+name: backfill
+
+# One-off: rebuild this year's news history from the Wayback Machine and download
+# every CVE of the year. Run it once from the Actions tab; it takes about an hour.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-news
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/cache/restore@v4
+        with:
+          path: cache
+          key: news-cache-${{ github.run_id }}
+          restore-keys: news-cache-
+      - run: node backfill.js
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: cache
+          key: news-cache-${{ github.run_id }}

@@ -1,0 +1,85 @@
+name: update-news
+
+# Rebuilds the data every 20 minutes and publishes public/ to GitHub Pages.
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two builds at once; a queued run waits instead of clobbering.
+concurrency:
+  group: update-news
+  cancel-in-progress: false
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      SITE_URL: ${{ vars.SITE_URL }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Only needed for the optional AI "why it matters" notes.
+      - name: Install optional AI SDK
+        if: env.ANTHROPIC_API_KEY != ''
+        run: npm install --no-audit --no-fund
+
+      # cache/ holds 30 days of story history, CVE scores, PoC lookups, IOCs and AI notes.
+      - uses: actions/cache/restore@v4
+        with:
+          path: cache
+          key: news-cache-${{ github.run_id }}
+          restore-keys: news-cache-
+
+      - name: Build data
+        run: node build.js
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: cache
+          key: news-cache-${{ github.run_id }}
+
+      - name: Write site config
+        run: |
+          node -e '
+            const fs = require("fs");
+            fs.writeFileSync("public/config.json", JSON.stringify({
+              repoUrl: process.env.REPO_URL,
+              siteUrl: process.env.SITE_URL || "",
+              buttondownUser: process.env.BUTTONDOWN_USER || "",
+              goatcounter: process.env.GOATCOUNTER || ""
+            }, null, 2));'
+          touch public/.nojekyll
+        env:
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+          BUTTONDOWN_USER: ${{ vars.BUTTONDOWN_USER }}
+          GOATCOUNTER: ${{ vars.GOATCOUNTER }}
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

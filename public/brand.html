@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<title>Brand · Threat Recap</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
+<link rel="stylesheet" href="style.css">
+<style>
+  section.b { border-top: 2px solid var(--text); padding: 22px 0 34px; }
+  section.b h2 { font: 600 12px var(--mono); text-transform: uppercase; letter-spacing: .12em; margin: 0 0 18px; }
+  .lock { display: flex; align-items: center; gap: 20px; }
+  .lock img { width: 84px; height: 84px; }
+  .lock .n { font: 700 52px/1 var(--serif); letter-spacing: -.02em; }
+  .lock .t { font: 600 13px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .card { border-radius: 6px; padding: 22px; display: flex; flex-direction: column; gap: 18px; }
+  .card.l { background: #f5f3ee; color: #17181b; border: 1px solid #e2ddd2; }
+  .card.d { background: #0f1012; color: #edebe6; }
+  .card.o { background: #e8590c; color: #fff; }
+  .row { display: flex; align-items: end; gap: 14px; }
+  .h { display: flex; align-items: center; gap: 10px; font: 700 20px var(--serif); }
+  .h img { width: 30px; height: 30px; }
+  .sw { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .sw div { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; font: 500 12.5px var(--mono); }
+  .sw i { display: block; height: 70px; }
+  .sw span { display: block; padding: 8px 10px; }
+  .type p { margin: 6px 0; }
+  .alt { display: flex; gap: 28px; flex-wrap: wrap; align-items: center; }
+  .alt figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .alt svg { width: 72px; height: 72px; }
+</style>
+</head>
+<body>
+<main class="wrap" id="main" style="max-width:1180px;padding-block:36px 64px">
+  <p class="hero-label">Brand sheet · not linked from the site</p>
+  <div class="lock" style="margin:10px 0 18px"><img src="icon.svg" alt=""><div><div class="n">Threat Recap</div><div class="t">Your daily security recap</div></div></div>
+  <p class="lede">The mark is a <b>recap arrow</b> — the counter-clockwise “go back over it” symbol — circling a signal-orange dot: the threat, caught and summarised. It is built from three shapes so it stays sharp as a 16-pixel browser tab icon.</p>
+
+  <section class="b"><h2>Logo on light, dark and accent</h2>
+    <div class="grid">
+      <div class="card l"><div class="h"><img src="icon.svg" alt="">Threat Recap</div><div class="row"><img src="icon.svg" width="16" height="16" alt=""><img src="icon.svg" width="32" height="32" alt=""><img src="icon.svg" width="64" height="64" alt=""></div></div>
+      <div class="card d"><div class="h"><img src="icon.svg" alt="">Threat Recap</div><div class="row"><img src="icon.svg" width="16" height="16" alt=""><img src="icon.svg" width="32" height="32" alt=""><img src="icon.svg" width="64" height="64" alt=""></div></div>
+      <div class="card o"><div class="h"><img src="icon.svg" alt="">Threat Recap</div><div class="row"><img src="apple-touch-icon.png" width="64" height="64" alt="" style="border-radius:14px"><img src="icon-192.png" width="64" height="64" alt="" style="border-radius:50%"></div><span style="font-size:13px">App icons (square, rounded or round masks)</span></div>
+    </div>
+  </section>
+
+  <section class="b"><h2>Colours</h2>
+    <div class="sw">
+      <div><i style="background:#17181b"></i><span>Ink #17181b</span></div>
+      <div><i style="background:#f5f3ee;border-bottom:1px solid var(--line)"></i><span>Paper #f5f3ee</span></div>
+      <div><i style="background:#e8590c"></i><span>Signal #e8590c</span></div>
+      <div><i style="background:#c2410c"></i><span>Signal (text) #c2410c</span></div>
+      <div><i style="background:#0f1012"></i><span>Night #0f1012</span></div>
+    </div>
+  </section>
+
+  <section class="b type"><h2>Type</h2>
+    <p style="font:700 40px/1.1 var(--serif);letter-spacing:-.02em">Source Serif 4 — headlines</p>
+    <p style="font:400 18px var(--font)">IBM Plex Sans — interface and body text</p>
+    <p style="font:500 15px var(--mono)">IBM Plex Mono — CVE-2026-88771 · data and labels</p>
+  </section>
+
+  <section class="b"><h2>Concepts not chosen</h2>
+    <div class="alt">
+      <figure><svg viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#17181b"/><path d="M47.5 25A17 17 0 1 0 49 37" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/><path d="M48.5 15.5 48 26 37.8 23.8" fill="none" stroke="#fff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="32" r="6" fill="#e8590c"/></svg>Clockwise (reads as “refresh”)</figure>
+      <figure><svg viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#17181b"/><path d="M14 20h36M14 32h24M14 44h16" stroke="#fff" stroke-width="5.5" stroke-linecap="round"/><path d="M40 44a9 9 0 1 0 2.6-6.4" fill="none" stroke="#e8590c" stroke-width="4.5" stroke-linecap="round"/><path d="M41 32.5v6h6" fill="none" stroke="#e8590c" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Headlines + recap (too busy when small)</figure>
+    </div>
+  </section>
+</main>
+</body>
+</html>

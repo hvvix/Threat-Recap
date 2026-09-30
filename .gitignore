@@ -1,0 +1,15 @@
+cache/
+public/data/
+public/digest.html
+public/actors/
+public/vendors/
+public/groups/
+public/feeds/
+public/sitemap.xml
+public/robots.txt
+node_modules/
+package-lock.json
+server.log
+public/icons/
+public/flags/
+public/stories/

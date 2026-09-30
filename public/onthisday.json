@@ -1,0 +1,212 @@
+[
+ {
+  "md": "01-03",
+  "y": 2018,
+  "t": "Meltdown and Spectre CPU flaws are disclosed",
+  "u": "https://en.wikipedia.org/wiki/Meltdown_(security_vulnerability)"
+ },
+ {
+  "md": "01-12",
+  "y": 2010,
+  "t": "Google discloses Operation Aurora, a China-linked attack on it and other firms",
+  "u": "https://en.wikipedia.org/wiki/Operation_Aurora"
+ },
+ {
+  "md": "01-25",
+  "y": 2003,
+  "t": "SQL Slammer worm infects 75,000 servers in about ten minutes",
+  "u": "https://en.wikipedia.org/wiki/SQL_Slammer"
+ },
+ {
+  "md": "02-04",
+  "y": 2016,
+  "t": "Bangladesh Bank heist: attackers use SWIFT to steal $81 million",
+  "u": "https://en.wikipedia.org/wiki/2016_Bangladesh_Bank_robbery"
+ },
+ {
+  "md": "02-21",
+  "y": 2024,
+  "t": "Change Healthcare ransomware attack disrupts US pharmacies and hospitals",
+  "u": "https://en.wikipedia.org/wiki/Change_Healthcare#Ransomware_attack"
+ },
+ {
+  "md": "03-02",
+  "y": 2021,
+  "t": "Microsoft discloses ProxyLogon Exchange zero-days exploited by HAFNIUM",
+  "u": "https://en.wikipedia.org/wiki/2021_Microsoft_Exchange_Server_data_breach"
+ },
+ {
+  "md": "03-26",
+  "y": 1999,
+  "t": "Melissa macro virus spreads through email worldwide",
+  "u": "https://en.wikipedia.org/wiki/Melissa_(computer_virus)"
+ },
+ {
+  "md": "03-29",
+  "y": 2024,
+  "t": "XZ Utils backdoor discovered days before reaching major Linux distributions",
+  "u": "https://en.wikipedia.org/wiki/XZ_Utils_backdoor"
+ },
+ {
+  "md": "04-07",
+  "y": 2014,
+  "t": "Heartbleed OpenSSL vulnerability is disclosed",
+  "u": "https://en.wikipedia.org/wiki/Heartbleed"
+ },
+ {
+  "md": "04-14",
+  "y": 2017,
+  "t": "Shadow Brokers leak NSA exploits including EternalBlue",
+  "u": "https://en.wikipedia.org/wiki/The_Shadow_Brokers"
+ },
+ {
+  "md": "05-04",
+  "y": 2000,
+  "t": "ILOVEYOU worm infects millions of Windows PCs",
+  "u": "https://en.wikipedia.org/wiki/ILOVEYOU"
+ },
+ {
+  "md": "05-07",
+  "y": 2021,
+  "t": "Colonial Pipeline ransomware attack shuts down the largest US fuel pipeline",
+  "u": "https://en.wikipedia.org/wiki/Colonial_Pipeline_ransomware_attack"
+ },
+ {
+  "md": "05-12",
+  "y": 2017,
+  "t": "WannaCry ransomware spreads worldwide using EternalBlue",
+  "u": "https://en.wikipedia.org/wiki/WannaCry_ransomware_attack"
+ },
+ {
+  "md": "05-31",
+  "y": 2023,
+  "t": "Progress discloses the MOVEit Transfer zero-day mass-exploited by Cl0p",
+  "u": "https://en.wikipedia.org/wiki/2023_MOVEit_data_breach"
+ },
+ {
+  "md": "06-04",
+  "y": 2015,
+  "t": "US OPM announces a breach of federal employee records",
+  "u": "https://en.wikipedia.org/wiki/Office_of_Personnel_Management_data_breach"
+ },
+ {
+  "md": "06-14",
+  "y": 2016,
+  "t": "DNC hack by Russian intelligence is publicly reported",
+  "u": "https://en.wikipedia.org/wiki/Democratic_National_Committee_cyber_attacks"
+ },
+ {
+  "md": "06-27",
+  "y": 2017,
+  "t": "NotPetya wiper hits Ukraine and spreads to global companies",
+  "u": "https://en.wikipedia.org/wiki/2017_Ukraine_ransomware_attacks"
+ },
+ {
+  "md": "07-02",
+  "y": 2021,
+  "t": "REvil ransomware hits Kaseya VSA customers in a supply-chain attack",
+  "u": "https://en.wikipedia.org/wiki/Kaseya_VSA_ransomware_attack"
+ },
+ {
+  "md": "07-15",
+  "y": 2020,
+  "t": "Hijacked high-profile Twitter accounts push a Bitcoin scam",
+  "u": "https://en.wikipedia.org/wiki/2020_Twitter_account_hijacking"
+ },
+ {
+  "md": "07-19",
+  "y": 2001,
+  "t": "Code Red worm infects more than 350,000 web servers in a day",
+  "u": "https://en.wikipedia.org/wiki/Code_Red_(computer_worm)"
+ },
+ {
+  "md": "07-19",
+  "y": 2024,
+  "t": "A faulty CrowdStrike update crashes about 8.5 million Windows machines",
+  "u": "https://en.wikipedia.org/wiki/2024_CrowdStrike-related_IT_outages"
+ },
+ {
+  "md": "07-29",
+  "y": 2019,
+  "t": "Capital One discloses a breach of over 100 million customers",
+  "u": "https://en.wikipedia.org/wiki/2019_Capital_One_data_breach"
+ },
+ {
+  "md": "08-11",
+  "y": 2003,
+  "t": "Blaster worm starts spreading via a Windows RPC flaw",
+  "u": "https://en.wikipedia.org/wiki/Blaster_(computer_worm)"
+ },
+ {
+  "md": "09-07",
+  "y": 2017,
+  "t": "Equifax discloses a breach affecting about 147 million people",
+  "u": "https://en.wikipedia.org/wiki/2017_Equifax_data_breach"
+ },
+ {
+  "md": "09-11",
+  "y": 2023,
+  "t": "MGM Resorts cyberattack disrupts casinos and hotels",
+  "u": "https://en.wikipedia.org/wiki/MGM_Resorts_International#2023_cyberattack"
+ },
+ {
+  "md": "09-15",
+  "y": 2022,
+  "t": "Uber is breached by an attacker linked to LAPSUS$",
+  "u": "https://en.wikipedia.org/wiki/Uber#Data_breaches"
+ },
+ {
+  "md": "09-22",
+  "y": 2016,
+  "t": "Yahoo discloses a 2014 breach of 500 million accounts",
+  "u": "https://en.wikipedia.org/wiki/Yahoo_data_breaches"
+ },
+ {
+  "md": "09-24",
+  "y": 2014,
+  "t": "Shellshock Bash vulnerability is disclosed",
+  "u": "https://en.wikipedia.org/wiki/Shellshock_(software_bug)"
+ },
+ {
+  "md": "10-21",
+  "y": 2016,
+  "t": "Mirai botnet DDoS takes down Dyn DNS and major websites",
+  "u": "https://en.wikipedia.org/wiki/2016_Dyn_cyberattack"
+ },
+ {
+  "md": "11-02",
+  "y": 1988,
+  "t": "Morris worm infects a large share of the early internet",
+  "u": "https://en.wikipedia.org/wiki/Morris_worm"
+ },
+ {
+  "md": "11-24",
+  "y": 2014,
+  "t": "Sony Pictures is hacked by a North Korea-linked group",
+  "u": "https://en.wikipedia.org/wiki/2014_Sony_Pictures_hack"
+ },
+ {
+  "md": "12-09",
+  "y": 2021,
+  "t": "Log4Shell (CVE-2021-44228) in Apache Log4j is disclosed",
+  "u": "https://en.wikipedia.org/wiki/Log4Shell"
+ },
+ {
+  "md": "12-13",
+  "y": 2020,
+  "t": "SolarWinds Orion supply-chain compromise is revealed",
+  "u": "https://en.wikipedia.org/wiki/2020_United_States_federal_government_data_breach"
+ },
+ {
+  "md": "12-19",
+  "y": 2013,
+  "t": "Target confirms theft of 40 million payment cards",
+  "u": "https://en.wikipedia.org/wiki/Target_Corporation#2013_security_breach"
+ },
+ {
+  "md": "12-23",
+  "y": 2015,
+  "t": "Cyberattack on Ukraine’s power grid causes the first hacker-induced blackout",
+  "u": "https://en.wikipedia.org/wiki/2015_Ukraine_power_grid_hack"
+ }
+]

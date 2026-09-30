@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Data API &amp; RSS feeds · Threat Recap</title>
+<meta name="description" content="Free JSON data files and RSS feeds from Threat Recap: cybersecurity news, CVEs, CISA KEV, EPSS, public exploits, IOCs, ransomware claims.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap"><link rel="stylesheet" href="style.css">
+<script>try{var t=localStorage.getItem('cih.theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<style>code { font: 13px var(--mono); background: var(--surface-2); padding: 1px 5px; border-radius: 4px; } pre { background: var(--surface-2); padding: 12px; border-radius: 8px; overflow-x: auto; font: 13px/1.5 var(--mono); }</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top"><div class="wrap top-row"><a class="brand" href="./"><img src="icon.svg" alt=""><span>Threat Recap</span></a><nav class="crumbs"><a href="./">News</a> · <a href="actors/">Threat actors</a> · <a href="vendors/">Vendors</a> · <a href="groups/">Ransomware groups</a></nav></div></header>
+<main class="wrap" id="main">
+<h1 style="font-size:26px">Data API &amp; RSS feeds</h1>
+<p>Everything on this site is built from plain static files that anyone can use for free: no key, no sign-up, CORS enabled. They're rebuilt about every 20 minutes, so checking more often than that just returns the same data — a 15–20 minute interval is plenty. The <code>generated</code> timestamp in each file tells you when it last changed.</p>
+
+<div class="panel"><h2>RSS feeds</h2><p class="desc">Add these to any feed reader, or to Slack/Teams with their RSS apps.</p>
+<div class="table-wrap"><table><tbody>
+<tr><td><a href="feeds/latest.xml">feeds/latest.xml</a></td><td>All news (no bulk advisories)</td></tr>
+<tr><td><a href="feeds/top.xml">feeds/top.xml</a></td><td>Stories covered by 3+ outlets</td></tr>
+<tr><td><a href="feeds/zeroday.xml">feeds/zeroday.xml</a></td><td>Zero-days &amp; actively exploited</td></tr>
+<tr><td><a href="feeds/kev.xml">feeds/kev.xml</a></td><td>New CISA KEV entries</td></tr>
+<tr><td><a href="feeds/breach.xml">feeds/breach.xml</a></td><td>Data breaches</td></tr>
+<tr><td><a href="feeds/apt.xml">feeds/apt.xml</a></td><td>APT &amp; nation-state activity</td></tr>
+<tr><td><a href="feeds/ransomware.xml">feeds/ransomware.xml</a></td><td>Ransomware news</td></tr>
+<tr><td><a href="feeds/supply-chain.xml">feeds/supply-chain.xml</a></td><td>Supply-chain attacks</td></tr>
+<tr><td><a href="feeds/research.xml">feeds/research.xml</a></td><td>Threat research reports</td></tr>
+<tr><td><a href="feeds/advisories.xml">feeds/advisories.xml</a></td><td>Vendor &amp; government advisories</td></tr>
+<tr><td><code>feeds/vendor-&lt;name&gt;.xml</code></td><td>Per vendor, e.g. <a href="feeds/vendor-fortinet.xml">vendor-fortinet.xml</a> (links on each <a href="vendors/">vendor page</a>)</td></tr>
+<tr><td><code>feeds/actor-&lt;name&gt;.xml</code></td><td>Per threat actor, e.g. <a href="feeds/actor-apt28.xml">actor-apt28.xml</a></td></tr>
+</tbody></table></div></div>
+
+<div class="panel"><h2>JSON files</h2>
+<div class="table-wrap"><table><thead><tr><th>File</th><th>Contents</th></tr></thead><tbody>
+<tr><td><a href="data/news.json">data/news.json</a></td><td><code>stories[]</code>: 30 days of merged stories. Keys: <code>id</code>, <code>t</code> title, <code>u</code> link, <code>s</code> source, <code>c</code> category, <code>d</code> published (ms), <code>f</code> first seen, <code>x</code> summary, <code>tg</code> tags, <code>cv</code> CVEs, <code>ac</code> actors, <code>ve</code> vendors, <code>at</code> ATT&amp;CK IDs, <code>mw</code> malware, <code>io</code> IOC count, <code>ai</code> AI note, <code>r</code> other outlets <code>[source, title, link, date]</code>, <code>b</code> bulk advisory, <code>so</code> social post</td></tr>
+<tr><td><a href="data/cves.json">data/cves.json</a></td><td><code>kev</code> latest KEV entries, <code>kevIndex</code> every KEV CVE → date added, <code>info</code> CVSS/description by CVE, <code>epss</code> [probability, percentile], <code>poc</code> public exploit repos, <code>recent</code> CVEs published in the last 4 days</td></tr>
+<tr><td><a href="data/iocs.json">data/iocs.json</a></td><td>IOCs per story id: <code>h</code> hashes, <code>ip</code>, <code>d</code> domains, <code>u</code> URLs, <code>src</code> report link</td></tr>
+<tr><td><a href="data/ransomware.json">data/ransomware.json</a></td><td>30-day claim counts by group / country / sector, per-day totals, latest 300 claims (unverified)</td></tr>
+<tr><td><a href="data/breaches.json">data/breaches.json</a></td><td>Newest breaches loaded into Have I Been Pwned</td></tr>
+<tr><td><a href="data/supply.json">data/supply.json</a></td><td>Latest malicious-package advisories (GitHub Advisory Database)</td></tr>
+<tr><td><a href="data/sources.json">data/sources.json</a></td><td>Every source with feed health</td></tr>
+<tr><td><a href="data/meta.json">data/meta.json</a></td><td>Vendor, actor, ransomware-group and malware name lists</td></tr>
+</tbody></table></div>
+<h3 style="font-size:15px">Example: exploited CVEs for a vendor</h3>
+<pre>const { kev } = await (await fetch('data/cves.json')).json();
+console.log(kev.filter(k =&gt; k.v === 'Fortinet'));</pre>
+<p class="desc">Upstream data belongs to its publishers: CISA (KEV), NIST NVD, MITRE CVE, FIRST (EPSS), nomi-sec/PoC-in-GitHub, ransomware.live, Have I Been Pwned, GitHub Advisory Database and each news source. Headlines link to the original articles.</p></div>
+</main>
+<footer><div class="wrap">Threat Recap — free cybersecurity news.</div></footer>
+</body>
+</html>

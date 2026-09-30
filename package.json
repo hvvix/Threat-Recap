@@ -1,0 +1,15 @@
+{
+  "name": "threat-recap",
+  "private": true,
+  "type": "module",
+  "description": "Free cybersecurity news, CVE, breach, APT and zero-day aggregator",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "build": "node build.js",
+    "start": "node server.js",
+    "digest": "node digest.js"
+  },
+  "optionalDependencies": {
+    "@anthropic-ai/sdk": "*"
+  }
+}

@@ -1,0 +1,40 @@
+name: weekly-digest
+
+# Every Wednesday 13:00 UTC: build fresh data and send the digest to Buttondown.
+# Saved as a draft unless the DIGEST_AUTOSEND variable is "true".
+on:
+  schedule:
+    - cron: "0 13 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: update-news
+  cancel-in-progress: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: ${{ vars.BUTTONDOWN_USER != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/cache/restore@v4
+        with:
+          path: cache
+          key: news-cache-${{ github.run_id }}
+          restore-keys: news-cache-
+      - run: node build.js
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: node digest.js
+        env:
+          BUTTONDOWN_API_KEY: ${{ secrets.BUTTONDOWN_API_KEY }}
+          DIGEST_AUTOSEND: ${{ vars.DIGEST_AUTOSEND }}
+          SITE_URL: ${{ vars.SITE_URL }}
