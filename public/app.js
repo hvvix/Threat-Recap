@@ -762,6 +762,7 @@ function openCve(id) {
     <p><button class="linkish" data-q="cve:${id}" data-close>Search all stories for ${id} →</button></p>`);
 }
 async function fillCvePlugins(id) {
+  if (!TAB.plugins) return;                      // section hidden on this deployment
   await lazy('plugins', 'plugins.json');
   const el = $('#cve-plugins'); if (!el) return;
   const ps = pluginsForCve(id);
@@ -987,7 +988,7 @@ function renderSources() {
       if (!rows.length) return '';
       if (c !== 'tool') rows.sort((a, b) => (day[b.n] || 0) - (day[a.n] || 0) || (b.latest || 0) - (a.latest || 0));
       return `<div class="panel"><h2>${label} <span class="muted" style="font-weight:400">(${rows.length})</span></h2><div class="table-wrap"><table><thead><tr><th>Source</th>${c === 'tool' ? '' : '<th>Today</th><th>Latest post</th><th>Status</th><th></th>'}</tr></thead><tbody>
-      ${rows.map(s => `<tr><td class="nowrap"><span class="srcname">${avatar(s.n)}<a href="${url(s.site)}" target="_blank" rel="noopener">${esc(s.n)}</a>${s.via ? ' <span class="muted" style="font-size:12px">via ifin</span>' : ''}</span></td>${c === 'tool' ? '' : `<td class="num">${day[s.n] ? `<button class="linkish" data-q="source:&quot;${esc(s.n)}&quot;" data-tab-go="latest"><b>${day[s.n]}</b></button>` : '<span class="muted">0</span>'}</td><td class="nowrap">${s.latest ? `<span title="${esc(fmtFull(s.latest))}">${fmtAgo(s.latest)}</span>` : '<span class="muted">—</span>'}</td><td class="nowrap">${s.feed ? (s.ok ? `<span class="status ok"></span>OK` : `<span class="status fail"></span>Failing${s.err ? ` <span class="muted">(${esc(s.err)})</span>` : ''}`) : '<span class="status none"></span>No feed'}</td><td class="nowrap">${s.feed ? `<a href="${url(s.feed)}" target="_blank" rel="noopener">RSS</a> · ` : ''}<button class="linkish" data-q="source:&quot;${esc(s.n)}&quot;" data-tab-go="latest">Stories</button></td>`}</tr>`).join('')}
+      ${rows.map(s => `<tr><td class="nowrap"><span class="srcname">${avatar(s.n)}<a href="${url(s.site)}" target="_blank" rel="noopener">${esc(s.n)}</a>${s.via ? ` <span class="muted" style="font-size:12px">via ${/ifin/.test(s.via) ? 'ifin' : esc(s.via)}</span>` : ''}</span></td>${c === 'tool' ? '' : `<td class="num">${day[s.n] ? `<button class="linkish" data-q="source:&quot;${esc(s.n)}&quot;" data-tab-go="latest"><b>${day[s.n]}</b></button>` : '<span class="muted">0</span>'}</td><td class="nowrap">${s.latest ? `<span title="${esc(fmtFull(s.latest))}">${fmtAgo(s.latest)}</span>` : '<span class="muted">—</span>'}</td><td class="nowrap">${s.feed ? (s.ok ? `<span class="status ok"></span>OK` : `<span class="status fail"></span>Failing${s.err ? ` <span class="muted">(${esc(s.err)})</span>` : ''}`) : '<span class="status none"></span>No feed'}</td><td class="nowrap">${s.feed ? `<a href="${url(s.feed)}" target="_blank" rel="noopener">RSS</a> · ` : ''}<button class="linkish" data-q="source:&quot;${esc(s.n)}&quot;" data-tab-go="latest">Stories</button></td>`}</tr>`).join('')}
       </tbody></table></div></div>`;
     }).join('');
 }
@@ -1675,7 +1676,18 @@ function render() {
   history.replaceState(null, '', u);
   document.title = `${state.q ? `“${state.q}” · ` : ''}${t === 'latest' ? '' : TAB[t].label + ' · '}Threat Recap`;
 }
+// Sections a deployment switches off in config.json ("hide": ["plugins"]) disappear from the
+// navigation, the command palette and old links.
+function hideSections(ids = []) {
+  for (const id of ids) {
+    const i = TABS.findIndex(t => t.id === id); if (i >= 0) TABS.splice(i, 1);
+    for (const [, list] of NAV_GROUPS) { const j = list.indexOf(id); if (j >= 0) list.splice(j, 1); }
+    delete TAB[id];
+  }
+  if (!TAB[state.tab]) state.tab = 'latest';
+}
 function setTab(t, sub) {
+  if (!TAB[t]) t = 'latest';
   state.tab = t; state.shown = PAGE;
   if (sub && t === 'cves') state.sub.cves = sub;
   render(); window.scrollTo({ top: 0 });
@@ -1853,6 +1865,7 @@ function updateStatus() {
 // ---------- boot ----------
 (async () => {
   try { D.config = await (await fetch('config.json')).json(); } catch {}
+  hideSections(D.config.hide);
   if (D.config.repoUrl) $('#repo-links').innerHTML = ` · <a href="${url(D.config.repoUrl)}" target="_blank" rel="noopener">Source code</a> · <a href="${url(D.config.repoUrl)}/issues/new" target="_blank" rel="noopener">Report a wrong tag or broken source</a>`;
   if (D.config.buttondownUser) { $('#newsletter').hidden = false; $('#nl-form').action = `https://buttondown.com/api/emails/embed-subscribe/${encodeURIComponent(D.config.buttondownUser)}`; }
   $('#q').value = state.q; $('#q-clear').hidden = !state.q; $('#kbd-slash').hidden = !!state.q;

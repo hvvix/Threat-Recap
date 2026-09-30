@@ -126,13 +126,45 @@ export function decodeBody(buf, contentType) {
   try { return new TextDecoder(cs.toLowerCase()).decode(buf); } catch { return buf.toString('utf8'); }
 }
 
+// Social-media feeds (e.g. Bluesky's per-account RSS) have no titles, and posts often write
+// names in "bold" Unicode letters with emoji around them. For a source with "posts": "<regex>",
+// keep only posts matching the regex and build a headline: "Victim (Country): first sentence".
+const EMOJI = /[\u{1F1E6}-\u{1F1FF}\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}\u{203C}\u{2049}\u{20E3}]/gu;
+// A run of math-alphanumeric "bold" letters; accented letters, digits and amounts inside it are
+// usually plain characters (no bold form exists), so they don't end the run.
+const FANCY_RUN = /[\u{1D400}-\u{1D7FF}](?:[\u{1D400}-\u{1D7FF}À-ɏ\p{M}0-9$€£%\s.,&'’()\/+-])*/u;
+export function postItems(items, src) {
+  const keep = new RegExp(src.posts, 'i');
+  return items.map(it => {
+    const raw = it.summary || it.title;
+    if (!keep.test(raw)) return null;
+    const flat = s => s.normalize('NFKC').replace(EMOJI, ' ').replace(/\s+/g, ' ').trim();
+    const body = flat(raw).replace(new RegExp(`^(?:${src.posts})\\W*`, 'i'), '');
+    const fancy = raw.match(FANCY_RUN);
+    const name = fancy ? flat(fancy[0]).replace(/[\s,(-]+$/, '').replace(/(\w{2,})\.$/, '$1') : '';
+    let where = '', rest = body;
+    const at = name ? body.indexOf(name) : -1;
+    if (at >= 0) { where = body.slice(0, at).replace(/[\s:–—-]+$/, '').trim(); rest = body.slice(at + name.length).trim(); }
+    // First sentence: ends at . ! ? after a lowercase letter or digit, so "A.P.S.P." or "S.A.S" don't end it.
+    let first = ((rest.match(/^.+?[a-z0-9)”"'][.!?](?=\s|$)/) || [rest])[0]).trim();
+    if (name && first.startsWith(name + ' ')) first = first.slice(name.length + 1);   // "X (Japan): X warned…" → "X (Japan): warned…"
+    const place = where && where.length < 40 ? ` (${where})` : '';
+    const room = Math.max(50, 110 - name.length - place.length);                    // keep headlines around 110 characters
+    const sentence = first.length > room ? first.slice(0, room).replace(/[\s,;:]+\S*$/, '') + '…' : first.replace(/\.$/, '');
+    const title = name.length > 45 ? name + place                  // the bold part is already a headline
+      : name ? `${name}${place}: ${sentence}` :(body.length > 140 ? body.slice(0, 140).replace(/\s+\S*$/, '') + '…' : body);
+    return { ...it, title, summary: body };
+  }).filter(Boolean);
+}
+
 async function fetchFeed(src) {
   let lastErr = '';
   for (const ua of [BOT_UA, BROWSER_UA]) {
     try {
       const { r, buf } = await fetchRaw(src.feed, { ua, accept: 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5' });
       if (!r.ok) { lastErr = `HTTP ${r.status}`; continue; }
-      const items = parseFeed(decodeBody(buf, r.headers.get('content-type')));
+      let items = parseFeed(decodeBody(buf, r.headers.get('content-type')));
+      if (src.posts && items.length) { items = postItems(items, src); if (!items.length) return { items }; }
       if (items.length) return { items };
       lastErr = 'no items (not a feed?)';
     } catch (e) { lastErr = e.cause?.code || e.name || String(e); }
@@ -499,7 +531,8 @@ async function main() {
     store[key] = { key, title: it.title, link: normLink(it.link), summary: it.summary, date, firstSeen: prev?.firstSeen ?? now,
       source: it.src.name, cat: it.src.cat, bulk: it.src.bulk ? 1 : 0, social: it.src.cat === 'social' ? 1 : 0,
       iocs: iocs !== undefined ? iocs : prev?.iocs, iocChecked: iocs !== undefined || prev?.iocChecked ? 1 : 0,
-      img: it.img || prev?.img || '', imgChecked: it.img ? 1 : prev?.imgChecked || 0 };
+      // Social posts get no preview image: their images are often screenshots of leak-site posts.
+      ...(it.src.posts ? { img: '', imgChecked: 1 } : { img: it.img || prev?.img || '', imgChecked: it.img ? 1 : prev?.imgChecked || 0 }) };
   }
   // prune: 30 days; bulk feeds newest N; per-source cap
   const bySrc = {};
@@ -575,7 +608,9 @@ async function main() {
   try { supply = await fetchSupplyChain(); log(`Supply chain advisories: ${supply.length}`); } catch (e) { log('GitHub advisories failed:', e.message); }
 
   let plugins = [];
-  try {
+  // HIDE_SECTIONS=plugins (set by the GitHub workflow) turns the Tenable section off for that site.
+  if ((process.env.HIDE_SECTIONS || '').split(',').includes('plugins')) log('Tenable plugins: skipped (section hidden)');
+  else try {
     const tStore = await readJSON(path.join(CACHE, 'tenable.json'), {});
     const added = await fetchTenable(tStore, { now });
     await writeJSON(path.join(CACHE, 'tenable.json'), tStore);

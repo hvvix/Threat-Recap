@@ -25,6 +25,8 @@ jobs:
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       SITE_URL: ${{ vars.SITE_URL }}
+      # Sections switched off on the public site (comma-separated tab ids). Local copies show everything.
+      HIDE_SECTIONS: ${{ vars.HIDE_SECTIONS || 'plugins' }}
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
@@ -67,7 +69,8 @@ jobs:
               repoUrl: process.env.REPO_URL,
               siteUrl: process.env.SITE_URL || "",
               buttondownUser: process.env.BUTTONDOWN_USER || "",
-              goatcounter: process.env.GOATCOUNTER || ""
+              goatcounter: process.env.GOATCOUNTER || "",
+              hide: (process.env.HIDE_SECTIONS || "").split(",").filter(Boolean)
             }, null, 2));'
           touch public/.nojekyll
         env:

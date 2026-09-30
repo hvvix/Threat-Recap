@@ -83,6 +83,8 @@
   {"name":"Help Net Security","cat":"news","site":"https://www.helpnetsecurity.com/","feed":"https://www.helpnetsecurity.com/feed/"},
   {"name":"Infosecurity Magazine","cat":"news","site":"https://www.infosecurity-magazine.com/","feed":"https://www.infosecurity-magazine.com/rss/news/"},
   {"name":"Risky Bulletin","cat":"news","site":"https://news.risky.biz/","feed":"https://news.risky.biz/rss/"},
+  {"name":"Hackmanac","cat":"news","site":"https://hackmanac.com/","feed":"https://hackmanac.com/feed"},
+  {"name":"Hackmanac Alerts","cat":"news","site":"https://bsky.app/profile/hackmanac.com","feed":"https://bsky.app/profile/hackmanac.com/rss","posts":"Cyber Alert","via":"Bluesky"},
   {"name":"0dayfans","cat":"advisory","site":"https://0dayfans.com/","feed":"https://0dayfans.com/feed.rss","bulk":true},
   {"name":"CISA Advisories","cat":"advisory","site":"https://www.cisa.gov/news-events/cybersecurity-advisories","feed":"https://www.cisa.gov/cybersecurity-advisories/all.xml"},
   {"name":"Apple Security Updates","cat":"advisory","site":"https://support.apple.com/en-us/100100","feed":"https://news.ifin.network/i/?a=rss&get=f_18","via":"news.ifin.network"},

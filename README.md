@@ -45,4 +45,4 @@ To run your own copy or change the sources, see [docs/SETUP.md](docs/SETUP.md).
 
 ## Credits
 
-Data comes from the publishers themselves and from CISA, NIST NVD, MITRE CVE, FIRST EPSS, nomi-sec/PoC-in-GitHub, Exploit-DB, ransomware.live, Have I Been Pwned, the GitHub Advisory Database, Tenable and the Wayback Machine. Some feeds (Black Hills InfoSec, LevelBlue SpiderLabs, Apple and Adobe bulletins, IFIN analysis) come from the public [IFIN news feed](https://news.ifin.network/). Site icons come from DuckDuckGo and flags from [flag-icons](https://github.com/lipis/flag-icons).
+Data comes from the publishers themselves and from CISA, NIST NVD, MITRE CVE, FIRST EPSS, nomi-sec/PoC-in-GitHub, Exploit-DB, ransomware.live, Have I Been Pwned, the GitHub Advisory Database and the Wayback Machine. Hackmanac's cyber-attack alerts come from its public Bluesky account. Some feeds (Black Hills InfoSec, LevelBlue SpiderLabs, Apple and Adobe bulletins, IFIN analysis) come from the public [IFIN news feed](https://news.ifin.network/). Site icons come from DuckDuckGo and flags from [flag-icons](https://github.com/lipis/flag-icons).
