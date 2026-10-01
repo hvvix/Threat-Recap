@@ -9,7 +9,7 @@ Free, no ads, no account.</p>
 
 ---
 
-Threat Recap reads about 100 security news sites, research blogs and official advisories every 20 minutes and puts everything on one searchable page, so you don't have to check dozens of sites every morning. The same story from several outlets is shown once, and every headline links to the original article.
+Threat Recap reads about 100 security news sites, research blogs and official advisories about every 30 minutes and puts everything on one searchable page, so you don't have to check dozens of sites every morning. The same story from several outlets is shown once, and every headline links to the original article.
 
 ## What's on it
 

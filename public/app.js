@@ -982,7 +982,7 @@ function renderSources() {
   const day = {}; for (const s of D.news.stories) if (now - s.d < DAY) { day[s.s] = (day[s.s] || 0) + 1; for (const r of s.r) if (now - r[3] < DAY) day[r[0]] = (day[r[0]] || 0) + 1; }
   const groups = [['research', 'Threat research & intel'], ['news', 'Cybersecurity news'], ['advisory', 'Alerts & advisories'], ['tool', 'Databases & tools (no feed)']];
   const repo = D.config.repoUrl;
-  $('#view').innerHTML = `<div class="note">We read these sources' public RSS/Atom feeds every ~20 minutes and link straight to the original article. Feeds marked <em>via ifin</em> come from the public <a href="https://news.ifin.network/" target="_blank" rel="noopener">IFIN news feed</a> because the publisher has none. ${repo ? `<a href="${url(repo)}/issues/new?title=${encodeURIComponent('Source suggestion / broken source')}" target="_blank" rel="noopener">Suggest a source or report a problem</a>.` : ''}</div>` +
+  $('#view').innerHTML = `<div class="note">We read these sources' public RSS/Atom feeds about every 30 minutes and link straight to the original article. Feeds marked <em>via ifin</em> come from the public <a href="https://news.ifin.network/" target="_blank" rel="noopener">IFIN news feed</a> because the publisher has none. ${repo ? `<a href="${url(repo)}/issues/new?title=${encodeURIComponent('Source suggestion / broken source')}" target="_blank" rel="noopener">Suggest a source or report a problem</a>.` : ''}</div>` +
     groups.map(([c, label]) => {
       let rows = list.filter(s => s.c === c);
       if (q) rows = rows.filter(s => s.n.toLowerCase().includes(q));
