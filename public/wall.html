@@ -15,7 +15,7 @@
   --bg: #0d0e10; --panel: #15171a; --line: #26292e; --text: #ecebe6; --muted: #9a9890; --dim: #6f6d66;
   --accent: #ff7a2e; --red: #ff5a52; --amber: #f2b33d; --violet: #b79cff; --green: #5fcf8a; --blue: #7fb0f0;
   --serif: 'Source Serif 4', Georgia, serif; --font: 'IBM Plex Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
-  color-scheme: dark; font-size: clamp(12px, 0.88vw + 0.12vh, 26px);
+  color-scheme: dark; font-size: calc(clamp(11px, 0.75vw + 0.1vh, 22px) * var(--zoom, 1));
 }
 :root[data-theme="light"] { --bg: #f2f0ea; --panel: #fbfaf7; --line: #dedad0; --text: #17181b; --muted: #5d5b55; --dim: #85827a; --accent: #c2410c; --red: #c62828; --amber: #a86400; --violet: #6b46c1; --green: #2e7d4f; --blue: #1f63b8; color-scheme: light; }
 * { box-sizing: border-box; }

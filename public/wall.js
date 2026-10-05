@@ -51,6 +51,21 @@ function freshness() {
 $('#b-full').onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.().catch(() => {});
 $('#b-theme').onclick = toggleTheme;
 addEventListener('keydown', e => { if (e.key === 'f' || e.key === 'F') $('#b-full').click(); if (e.key === 't' || e.key === 'T') toggleTheme(); });
+// Zoom: - / + / 0 (or ?zoom=0.9). Remembered on this screen.
+let zoom = Number(params.get('zoom')) || (() => { try { return Number(localStorage.getItem('cih.wallZoom')) || 1; } catch { return 1; } })();
+function setZoom(z) {
+  zoom = Math.min(1.6, Math.max(0.6, Math.round(z * 100) / 100));
+  document.documentElement.style.setProperty('--zoom', zoom);
+  try { localStorage.setItem('cih.wallZoom', zoom); } catch {}
+  requestAnimationFrame(fit);
+}
+setZoom(zoom);
+addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;            // leave the browser's own Ctrl +/- alone
+  if (e.key === '-' || e.key === '_') setZoom(zoom - 0.05);
+  else if (e.key === '+' || e.key === '=') setZoom(zoom + 0.05);
+  else if (e.key === '0') setZoom(1);
+});
 // Hide the cursor and buttons when the mouse is still.
 let idleT; const wake = () => { document.body.classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => document.body.classList.add('idle'), 4000); };
 addEventListener('mousemove', wake); wake();
