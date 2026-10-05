@@ -132,7 +132,8 @@ function renderLatest() {
 }
 
 function spotlightList() {
-  const day = stories().filter(s => Date.now() - s.d < DAY);
+  // Hackmanac alerts have their own panel, so they are left out of the spotlight.
+  const day = stories().filter(s => Date.now() - s.d < DAY && s.s !== 'Hackmanac Alerts');
   const top = day.slice().sort((a, b) => b.r.length - a.r.length || b.d - a.d).slice(0, 6);
   return top.length ? top : stories().slice().sort((a, b) => b.d - a.d).slice(0, 6);
 }
@@ -190,50 +191,107 @@ function countryCode(name) {
 }
 // Small, stable offset per event so several attacks in one country don't sit on the same pixel.
 const jitter = (key, r) => { let h = 0; for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) | 0; return [((h & 255) / 255 - 0.5) * r, (((h >> 8) & 255) / 255 - 0.5) * r]; };
-let mapEvents = [], mapIdx = 0;
-function renderMap() {
-  const W = D.world; if (!W) { $('#map').innerHTML = '<p class="empty">Map unavailable.</p>'; return; }
-  // Attacks aren't tied to products, so the map always shows global activity (also in My stack mode).
-  // On quiet days the window widens from 72 hours to 7 days so the map is never empty.
-  const collect = since => {
-    const ev = [];
-    for (const v of D.rw?.recent || []) if (v.d > since && v.c && W.centers[v.c]) ev.push({ k: 'rw', c: v.c, d: v.d, who: v.g, what: v.t, where: region?.of(v.c) || v.c });
-    for (const s of allStories()) {
-      if (s.s !== 'Hackmanac Alerts' || s.d < since) continue;
-      const c = alertCountry(s);
-      if (c && W.centers[c]) ev.push({ k: 'hm', c, d: s.d, who: 'Hackmanac', what: s.t, where: region?.of(c) || c });
-    }
-    return ev.sort((a, b) => b.d - a.d);
-  };
-  let ev = collect(Date.now() - 3 * DAY), span = '72 h';
-  if (ev.length < 25) { ev = collect(Date.now() - 7 * DAY); span = '7 days'; }
-  mapEvents = ev.slice(0, 150);
-  $('.p-map h2').firstChild.textContent = `Attacks · last ${span} `;
-  // Shade countries by the last 7 days of ransomware claims.
-  const counts = Object.fromEntries(D.rw?.countries7 || []), max = Math.max(1, ...Object.values(counts));
-  const tier = c => { const n = counts[c]; if (!n) return ''; const r = n / max; return r > 0.5 ? 't4' : r > 0.2 ? 't3' : r > 0.07 ? 't2' : 't1'; };
-  const land = Object.entries(W.paths).map(([c, d]) => `<path class="land ${tier(c)}" d="${d}"><title>${esc(region?.of(c) || c)}${counts[c] ? `: ${counts[c]} claims in 7 days` : ''}</title></path>`).join('');
-  const dots = mapEvents.slice().reverse().map((e, i) => { const [x, y] = W.centers[e.c], [dx, dy] = jitter(e.what, 14); return `<circle class="p ${e.k}${Date.now() - e.d < 6 * HOUR ? ' fresh' : ''}" cx="${(x + dx).toFixed(1)}" cy="${(y + dy).toFixed(1)}" r="${Date.now() - e.d < 6 * HOUR ? 5.5 : 3.8}"/>`; }).join('');
-  $('#map').innerHTML = `<svg viewBox="0 0 ${W.w} ${W.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="World map of recent attacks">${land}<g>${dots}</g><g id="map-ring"></g></svg>`;
-  const rwN = mapEvents.filter(e => e.k === 'rw').length, hmN = mapEvents.length - rwN;
-  $('#map-n').textContent = `${rwN} claims · ${hmN} alerts`;
-  // Most targeted countries this month (ransomware claims).
-  const top = (D.rw?.totals?.month?.countries || []).slice(0, 5);
-  $('#map-top').innerHTML = top.length ? `<span class="lbl">Most targeted · ${esc(monthName())}</span>${top.map(([c, n]) => `<span class="mt"><img src="flags/${esc(c.toLowerCase())}.svg" alt="" onerror="this.remove()">${esc(region?.of(c) || c)} <b>${num(n)}</b></span>`).join('')}` : '';
-  mapIdx = 0; spotlightEvent();
-}
+// The map replays the last 72 hours as a loop: each reported attack streaks in and lands on its country,
+// with a ripple and a label, while a playhead moves along a timeline. Only victims' countries are known,
+// so the streaks show when an attack was reported, not where it came from.
+let mapEvents = [], mapWin = { start: 0, end: 0 }, play = null;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const monthName = () => new Date().toLocaleDateString([], { month: 'long' });
 // Hackmanac alert titles end the victim with "(Country)".
 const alertCountry = s => { const m = s.t.match(/\(([^)]{2,40})\)/); return m ? countryCode(m[1]) : null; };
-// Every few seconds, highlight one of the newest attacks with a ring and a caption.
-function spotlightEvent() {
-  const W = D.world, list = mapEvents.slice(0, 15); if (!W || !list.length) { $('#map-cap').innerHTML = '<span class="empty">No attacks recorded in the last 72 hours.</span>'; return; }
-  const e = list[mapIdx % list.length]; mapIdx++;
-  const [x, y] = W.centers[e.c], [dx, dy] = jitter(e.what, 14);
-  const ring = $('#map-ring'); if (ring) ring.innerHTML = `<circle class="ring" cx="${(x + dx).toFixed(1)}" cy="${(y + dy).toFixed(1)}" r="5"/>`;
-  $('#map-cap').innerHTML = `<b style="color:${e.k === 'rw' ? 'var(--violet)' : 'var(--accent)'}">${esc(e.who)}</b>${e.k === 'rw' ? `claimed <strong>${esc(e.what)}</strong>` : esc(e.what.replace(/\s*\([^)]*\)/, ''))} · ${esc(e.where)}<span class="when">${ago(e.d)} ago</span>`;
+const actorOf = t => (t.match(/^(?:.*?\):\s*)?([A-Z][\w.&' -]{1,40}?)(?: hacking group| ransomware group| ransomware| group)? claim/) || [])[1];
+const victimOf = t => t.replace(/\s*\([^)]*\).*$/, '');
+const SVG = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, attrs) => { const el = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v); return el; };
+
+function renderMap() {
+  const W = D.world; if (!W) { $('#map').innerHTML = '<p class="empty">Map unavailable.</p>'; return; }
+  // Attacks aren't tied to products, so the map always shows global activity (also in My stack mode).
+  const collect = since => {
+    const ev = [];
+    for (const v of D.rw?.recent || []) if (v.d > since && v.c && W.centers[v.c]) ev.push({ k: 'rw', c: v.c, d: v.d, who: v.g, what: v.t });
+    for (const s of allStories()) {
+      if (s.s !== 'Hackmanac Alerts' || s.d < since || /^Hack Tuesday/i.test(s.t)) continue;
+      const c = alertCountry(s);
+      if (c && W.centers[c]) ev.push({ k: 'hm', c, d: s.d, who: actorOf(s.t) || 'Attack', what: victimOf(s.t) });
+    }
+    return ev.sort((a, b) => a.d - b.d);
+  };
+  let span = 3 * DAY, ev = collect(Date.now() - span);
+  if (ev.length < 25) { span = 7 * DAY; ev = collect(Date.now() - span); }   // quiet days: widen to a week
+  mapEvents = ev.slice(-180).map((e, i) => { const [x, y] = W.centers[e.c], [dx, dy] = jitter(e.what + e.d, 14); return { ...e, i, x: x + dx, y: y + dy, where: region?.of(e.c) || e.c }; });
+  mapWin = { start: Date.now() - span, end: Date.now() };
+  $('.p-map h2').firstChild.textContent = `Attacks · last ${span > 3 * DAY ? '7 days' : '72 h'} `;
+  const rwN = mapEvents.filter(e => e.k === 'rw').length;
+  $('#map-n').textContent = `${rwN} claims · ${mapEvents.length - rwN} alerts`;
+
+  // Countries shaded by the last 7 days of ransomware claims; every attack is a dim dot until the replay reaches it.
+  const counts = Object.fromEntries(D.rw?.countries7 || []), max = Math.max(1, ...Object.values(counts));
+  const tier = c => { const n = counts[c]; if (!n) return ''; const r = n / max; return r > 0.5 ? 't4' : r > 0.2 ? 't3' : r > 0.07 ? 't2' : 't1'; };
+  const land = Object.entries(W.paths).map(([c, d]) => `<path class="land ${tier(c)}" d="${d}"><title>${esc(region?.of(c) || c)}${counts[c] ? `: ${counts[c]} ransomware claims in 7 days` : ''}</title></path>`).join('');
+  const dots = mapEvents.map(e => `<circle id="ev${e.i}" class="p ${e.k}" cx="${e.x.toFixed(1)}" cy="${e.y.toFixed(1)}" r="4.6"><title>${esc(e.who)} → ${esc(e.what)} · ${esc(e.where)} · ${ago(e.d)} ago</title></circle>`).join('');
+  $('#map').innerHTML = `<svg viewBox="0 0 ${W.w} ${W.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Replay of attacks reported in the last ${span > 3 * DAY ? '7 days' : '72 hours'}">${land}<g id="map-dots">${dots}</g><g id="map-fx"></g></svg><ul class="map-feed" id="map-feed"></ul>`;
+
+  const top = (D.rw?.totals?.month?.countries || []).slice(0, 4);
+  $('#map-top').innerHTML = top.length ? `<span class="lbl">Most targeted · ${esc(monthName())}</span>${top.map(([c, n]) => `<span class="mt"><img src="flags/${esc(c.toLowerCase())}.svg" alt="" onerror="this.remove()">${esc(region?.of(c) || c)} <b>${num(n)}</b></span>`).join('')}` : '';
+  startReplay();
 }
-setInterval(spotlightEvent, 4000);
+
+function landAttack(e) {
+  const W = D.world, fx = $('#map-fx'), dot = document.getElementById(`ev${e.i}`); if (!fx) return;
+  dot?.classList.add('hit');
+  // Streak: a short curve that comes in from the upper left and lands on the target.
+  const sx = Math.max(4, e.x - 70 - (e.i % 5) * 12), sy = Math.max(4, e.y - 95 + (e.i % 3) * 10), cx = (sx + e.x) / 2 - 20, cy = Math.min(sy, e.y) - 25;
+  const g = svgEl('g', { class: `fx ${e.k}` });
+  g.append(svgEl('path', { class: 'streak', d: `M${sx.toFixed(1)},${sy.toFixed(1)} Q${cx.toFixed(1)},${cy.toFixed(1)} ${e.x.toFixed(1)},${e.y.toFixed(1)}`, pathLength: '1' }));
+  g.append(svgEl('circle', { class: 'impact', cx: e.x.toFixed(1), cy: e.y.toFixed(1), r: '4' }));
+  // Label, kept inside the map.
+  const lx = Math.min(W.w - 300, Math.max(6, e.x + 10)), ly = Math.max(22, e.y - 10);
+  const label = svgEl('text', { class: 'lbl', x: lx.toFixed(1), y: ly.toFixed(1) });
+  label.textContent = `${e.who} → ${e.what.length > 26 ? e.what.slice(0, 25) + '…' : e.what}`;
+  g.append(label);
+  fx.append(g);
+  setTimeout(() => g.remove(), 3200);
+  while (fx.childElementCount > 6) fx.firstChild.remove();
+  // Feed of the latest landings (newest first).
+  const feed = $('#map-feed');
+  if (feed) {
+    const li = document.createElement('li');
+    li.className = e.k;
+    li.innerHTML = `<b>${esc(e.who)}</b> → ${esc(e.what)} <span class="w">${esc(e.where)} · ${ago(e.d)} ago</span>`;
+    feed.prepend(li);
+    while (feed.childElementCount > 3) feed.lastChild.remove();
+  }
+}
+
+function startReplay() {
+  if (play) cancelAnimationFrame(play.raf);
+  const list = mapEvents, { start, end } = mapWin;
+  const fmt = t => new Date(t).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+  if (reduceMotion || !list.length) {
+    document.querySelectorAll('#map-dots circle').forEach(c => c.classList.add('hit'));
+    list.slice(-3).forEach(landAttack);
+    $('#map-ph').style.width = '100%'; $('#map-clock').textContent = list.length ? `Up to ${fmt(end)}` : 'No attacks reported';
+    return;
+  }
+  const LOOP = Math.min(90, Math.max(40, list.length * 0.9)) * 1000, HOLD = 4000;
+  play = { t0: performance.now(), next: 0, raf: 0, lastLabel: 0 };
+  const frame = now => {
+    const el = now - play.t0;
+    if (el > LOOP + HOLD) {                           // loop: dim everything and start again
+      document.querySelectorAll('#map-dots circle.hit').forEach(c => c.classList.remove('hit'));
+      play.t0 = now; play.next = 0;
+    } else {
+      const sim = start + Math.min(1, el / LOOP) * (end - start);
+      while (play.next < list.length && list[play.next].d <= sim) landAttack(list[play.next++]);
+      $('#map-ph').style.width = `${Math.min(100, el / LOOP * 100)}%`;
+      if (now - play.lastLabel > 250) { $('#map-clock').textContent = `Replay · ${fmt(sim)}`; play.lastLabel = now; }
+    }
+    play.raf = requestAnimationFrame(frame);
+  };
+  play.raf = requestAnimationFrame(frame);
+}
+
 
 function renderTicker() {
   const list = stories().slice().sort((a, b) => b.d - a.d).slice(0, 24);

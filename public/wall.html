@@ -45,7 +45,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 400 1rem/1.4 
 body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transition: opacity 0.6s; }
 
 /* Grid of panels */
-.grid { display: grid; min-height: 0; gap: 0.9rem; grid-template-columns: 1.25fr 1fr 1fr; grid-template-rows: minmax(0, 1.05fr) minmax(0, 1fr);
+.grid { display: grid; min-height: 0; gap: 0.9rem; grid-template-columns: 1.25fr 1fr 1fr; grid-template-rows: minmax(0, 0.92fr) minmax(0, 1.08fr);
   grid-template-areas: "latest spot alerts" "latest map exp"; }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 0.6rem; padding: 0.9rem 1rem; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .panel h2 { margin: 0 0 0.6rem; font: 600 0.78rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 0.5rem; }
@@ -76,21 +76,35 @@ body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transit
 .alerts .what { grid-column: 2 / 4; font-size: 0.88rem; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .alerts .what b { color: var(--text); font-weight: 600; }
 
-/* Attack map */
+/* Attack map (time-lapse replay) */
+.map { position: relative; }
+.map circle.p { opacity: 0.28; transition: opacity 0.6s, r 0.6s; }
+.map circle.p.hit { opacity: 0.95; }
+.map .fx .streak { fill: none; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 0.9s ease-in forwards, fadeout 0.8s 1.6s forwards; }
+.map .fx.rw .streak { stroke: var(--violet); } .map .fx.hm .streak { stroke: var(--accent); }
+.map .fx .impact { fill: none; stroke-width: 2.4; opacity: 0; transform-box: fill-box; transform-origin: center; animation: ripple 1.6s 0.85s ease-out forwards; }
+.map .fx.rw .impact { stroke: var(--violet); } .map .fx.hm .impact { stroke: var(--accent); }
+.map .fx .lbl { font: 600 19px var(--font); fill: var(--text); paint-order: stroke; stroke: var(--panel); stroke-width: 5px; opacity: 0; animation: lblin 2.4s 0.85s forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes fadeout { to { opacity: 0; } }
+@keyframes ripple { 0% { opacity: 1; transform: scale(0.5); } 100% { opacity: 0; transform: scale(4); } }
+@keyframes lblin { 0% { opacity: 0; } 12% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+.map-feed { position: absolute; left: 0.2rem; bottom: 0.2rem; margin: 0; padding: 0.35rem 0.55rem; list-style: none; background: color-mix(in srgb, var(--panel) 82%, transparent); border: 1px solid var(--line); border-radius: 0.4rem; max-width: 62%; font-size: 0.78rem; pointer-events: none; }
+.map-feed:empty { display: none; }
+.map-feed li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0.08rem 0; animation: fade 0.5s ease; }
+.map-feed li b { font-weight: 600; } .map-feed li.rw b { color: var(--violet); } .map-feed li.hm b { color: var(--accent); }
+.map-feed .w { color: var(--muted); font: 500 0.7rem var(--mono); margin-left: 0.3rem; }
+.timeline { display: flex; align-items: center; gap: 0.6rem; padding-top: 0.35rem; }
+.tl-bar { flex: 1; height: 0.22rem; background: var(--line); border-radius: 99px; overflow: hidden; }
+.tl-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--violet), var(--accent)); }
+#map-clock { font: 500 0.72rem var(--mono); color: var(--muted); white-space: nowrap; min-width: 9.5rem; text-align: right; }
 .map { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
 .map svg { width: 100%; height: 100%; display: block; }
 .map .land { fill: var(--line); stroke: var(--panel); stroke-width: 0.5; }
 .map .t1 { fill: color-mix(in srgb, var(--violet) 22%, var(--line)); } .map .t2 { fill: color-mix(in srgb, var(--violet) 40%, var(--line)); }
 .map .t3 { fill: color-mix(in srgb, var(--violet) 60%, var(--line)); } .map .t4 { fill: color-mix(in srgb, var(--violet) 80%, var(--line)); }
-.map circle.p { stroke: var(--panel); stroke-width: 0.8; opacity: 0.85; }
+.map circle.p { stroke: var(--panel); stroke-width: 0.8; }
 .map circle.rw { fill: var(--violet); } .map circle.hm { fill: var(--accent); }
-.map circle.fresh { animation: blink 2.4s infinite; }
-@keyframes blink { 50% { opacity: 0.35; } }
-.map circle.ring { fill: none; stroke: var(--text); stroke-width: 1.4; animation: ring 2s ease-out infinite; transform-box: fill-box; transform-origin: center; }
-@keyframes ring { from { transform: scale(0.6); opacity: 1; } to { transform: scale(3.2); opacity: 0; } }
-.map-cap { font-size: 0.9rem; min-height: 2.6em; padding-top: 0.3rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.map-cap b { font: 600 0.75rem var(--mono); text-transform: uppercase; letter-spacing: 0.06em; margin-right: 0.4rem; }
-.map-cap .when { color: var(--muted); font: 500 0.78rem var(--mono); margin-left: 0.4rem; }
 .map-top { display: flex; flex-wrap: wrap; gap: 0.25rem 0.9rem; align-items: center; font-size: 0.82rem; padding-top: 0.35rem; border-top: 1px solid var(--line); margin-top: 0.3rem; }
 .map-top .lbl { font: 600 0.68rem var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 .map-top .mt { display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; } .map-top img { width: 1.1rem; height: 0.8rem; object-fit: cover; border-radius: 2px; } .map-top b { font: 600 0.8rem var(--mono); color: var(--violet); }
@@ -202,8 +216,10 @@ body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transit
     <section class="panel p-latest"><h2>Latest <span class="right" id="latest-n"></span></h2><ul class="list news" id="latest"></ul></section>
     <section class="panel p-spot"><h2>Top stories · last 24 h</h2><div id="spot" style="display:flex;flex-direction:column;flex:1;min-height:0"></div></section>
     <section class="panel p-alerts"><h2>Cyber attack alerts · Hackmanac <span class="right" id="alerts-n"></span></h2><ul class="list alerts" id="alerts"></ul><div class="note">From Hackmanac's cyber attack alerts (hackmanac.com). Claims by attackers are unverified.</div></section>
-    <section class="panel p-map"><h2>Attacks · last 72 h <span class="right" id="map-n"></span></h2><div class="map" id="map"></div><div class="map-cap" id="map-cap"></div><div class="map-top" id="map-top"></div>
-      <div class="legend"><span><i class="dot rw"></i>Ransomware claim</span><span><i class="dot hm"></i>Hackmanac alert</span><span class="muted">Claims by criminal groups are unverified.</span></div></section>
+    <section class="panel p-map"><h2>Attacks · last 72 h <span class="right" id="map-n"></span></h2><div class="map" id="map"></div>
+      <div class="timeline"><div class="tl-bar"><i id="map-ph"></i></div><span id="map-clock"></span></div>
+      <div class="map-top" id="map-top"></div>
+      <div class="legend"><span><i class="dot rw"></i>Ransomware claim</span><span><i class="dot hm"></i>Hackmanac alert</span><span>Replay of reported attacks · origins unknown · claims unverified</span></div></section>
     <section class="panel p-exp"><h2 class="tabs"><span data-pane="kev">Newly exploited · KEV</span><span data-pane="zd">Zero-days · 72 h</span><span class="right" id="exp-n"></span></h2>
       <ul class="list rows" id="kev"></ul><ul class="list rows" id="zd" hidden></ul><div class="dots" id="exp-dots" style="--rot:20000ms"><i></i><i></i></div></section>
   </main>
