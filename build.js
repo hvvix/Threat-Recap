@@ -19,6 +19,7 @@ import { writeArchive } from './archive.js';
 import { LANDMARKS } from './landmarks.js';
 import { writeSite } from './site.js';
 import { catRegex, PRODUCTS } from './topics.js';
+import { fetchStatus } from './status.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(ROOT, 'public', 'data');
@@ -422,6 +423,18 @@ async function fetchRansomware(stories = []) {
     totals.countriesAll = Object.entries(allCountries).sort((a, b) => b[1] - a[1]);
     for (const v of all) { const d = Date.parse(v.discovered); if (d >= yStart) { totals.ytd++; if (v.country) ytdCountries[v.country] = (ytdCountries[v.country] || 0) + 1; } }
     totals.countriesYtd = Object.entries(ytdCountries).sort((a, b) => b[1] - a[1]);
+    // This month so far by country (UTC), last month up to the same day for a fair comparison, and top groups per country.
+    const now = new Date(), mStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1), pStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1);
+    const pSameDay = pStart + (Date.now() - mStart);
+    const mC = {}, pC = {}, mG = {};
+    for (const v of all) {
+      const d = Date.parse(v.discovered), c = v.country; if (!c || !(d >= pStart)) continue;
+      if (d >= mStart) { mC[c] = (mC[c] || 0) + 1; ((mG[c] ||= {})[v.group_name] = (mG[c][v.group_name] || 0) + 1); }
+      else if (d < pSameDay) pC[c] = (pC[c] || 0) + 1;
+    }
+    const sorted = o => Object.entries(o).sort((a, b) => b[1] - a[1]);
+    totals.month = { key: now.toISOString().slice(0, 7), countries: sorted(mC), prevToDate: sorted(pC),
+      groups: Object.fromEntries(Object.entries(mG).map(([c, g]) => [c, sorted(g).slice(0, 3)])) };
     yearList = all.map(v => ({ t: v.post_title, g: v.group_name, d: Date.parse(v.discovered), p: Date.parse(v.published) || null, c: v.country || '', a: v.activity && v.activity !== 'Not Found' ? v.activity : '', w: v.website || '' })).filter(v => v.d >= yStart).sort((a, b) => b.d - a.d);
     const cutoff = Date.now() - 31 * DAY;
     victims = all.map(v => ({ t: v.post_title, g: v.group_name, d: Date.parse(v.discovered), p: Date.parse(v.published) || null, c: v.country || '', a: v.activity || '', w: v.website || '', x: (v.description || '').replace(/\s+/g, ' ').slice(0, 220) }))
@@ -724,6 +737,7 @@ async function main() {
   if (plugins.length) await writeJSON(path.join(OUT, 'plugins.json'), { generated, plugins });
   if (world) await writeJSON(path.join(OUT, 'world.json'), world);
   await writeJSON(path.join(OUT, 'supply.json'), { generated, advisories: supply });
+  try { const st = await fetchStatus(); await writeJSON(path.join(OUT, 'status.json'), st); log(`Vendor status: ${st.vendors.map(v => `${v.n} ${v.s}`).join(', ')}`); } catch (e) { log('Vendor status failed:', e.message); }
   const st = Object.fromEntries(status.map(s => [s.n, s]));
   if (ransomware) { try { await syncFlags(new Set([...(ransomware.totals?.countriesYtd || []).map(c => c[0]), ...ransomware.recent.map(v => v.c)])); } catch (e) { log('Flags failed:', e.message); } }
   let icons = {};

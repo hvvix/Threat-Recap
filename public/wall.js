@@ -44,7 +44,8 @@ function freshness() {
   const age = Date.now() - generated, offline = Date.now() - lastOk > 15 * MIN;
   $('#live').className = 'live' + (offline ? ' down' : age > 90 * MIN ? ' stale' : '');
   $('#live-txt').textContent = offline ? 'OFFLINE' : age > 90 * MIN ? 'DELAYED' : 'LIVE';
-  $('#fresh').innerHTML = `Data updated ${ago(generated)} ago${stackMode ? ` <span class="stackbar">My stack${hasStack ? `: ${esc(clip([...stack.vendors, ...stack.keywords].join(', '), 50))}` : ' (none set)'}</span>` : ''}`;
+  $('#live').title = `News data updated ${ago(generated) === 'now' ? 'just now' : ago(generated) + ' ago'}`;
+  $('#fresh').innerHTML = stackMode ? `<span class="stackbar" title="${esc([...stack.vendors, ...stack.keywords].join(', '))}">My stack${hasStack ? '' : ' (none set)'}</span>` : '';
   const b = $('#banner');
   b.hidden = !offline;
   if (offline) b.textContent = `Can't reach the site — showing data from ${new Date(generated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
@@ -92,19 +93,58 @@ const stories = () => stackMode ? allStories().filter(isMine) : allStories();
 const kevList = () => (D.cves.kev || []).filter(k => !stackMode || kevMine(k));
 
 // ---------- panels ----------
+// ---------- this month in your country and region ----------
+// Country: ?country=AE, else guessed from the screen's time zone, else from the browser language.
+const TZ_COUNTRY = {
+  'Asia/Riyadh': 'SA', 'Asia/Dubai': 'AE', 'Asia/Qatar': 'QA', 'Asia/Kuwait': 'KW', 'Asia/Bahrain': 'BH', 'Asia/Muscat': 'OM', 'Asia/Amman': 'JO', 'Asia/Beirut': 'LB',
+  'Asia/Jerusalem': 'IL', 'Asia/Tel_Aviv': 'IL', 'Asia/Baghdad': 'IQ', 'Asia/Tehran': 'IR', 'Africa/Cairo': 'EG', 'Europe/Istanbul': 'TR', 'Asia/Aden': 'YE', 'Asia/Damascus': 'SY',
+  'Europe/London': 'GB', 'Europe/Dublin': 'IE', 'Europe/Paris': 'FR', 'Europe/Berlin': 'DE', 'Europe/Madrid': 'ES', 'Europe/Lisbon': 'PT', 'Europe/Rome': 'IT', 'Europe/Amsterdam': 'NL',
+  'Europe/Brussels': 'BE', 'Europe/Zurich': 'CH', 'Europe/Vienna': 'AT', 'Europe/Stockholm': 'SE', 'Europe/Oslo': 'NO', 'Europe/Copenhagen': 'DK', 'Europe/Helsinki': 'FI',
+  'Europe/Warsaw': 'PL', 'Europe/Prague': 'CZ', 'Europe/Budapest': 'HU', 'Europe/Bucharest': 'RO', 'Europe/Athens': 'GR', 'Europe/Kyiv': 'UA', 'Europe/Kiev': 'UA', 'Europe/Moscow': 'RU',
+  'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US', 'America/Phoenix': 'US', 'America/Los_Angeles': 'US', 'America/Anchorage': 'US', 'Pacific/Honolulu': 'US',
+  'America/Toronto': 'CA', 'America/Vancouver': 'CA', 'America/Edmonton': 'CA', 'America/Halifax': 'CA', 'America/Mexico_City': 'MX', 'America/Sao_Paulo': 'BR',
+  'America/Argentina/Buenos_Aires': 'AR', 'America/Bogota': 'CO', 'America/Santiago': 'CL', 'America/Lima': 'PE', 'Asia/Kolkata': 'IN', 'Asia/Calcutta': 'IN', 'Asia/Karachi': 'PK',
+  'Asia/Dhaka': 'BD', 'Asia/Singapore': 'SG', 'Asia/Kuala_Lumpur': 'MY', 'Asia/Bangkok': 'TH', 'Asia/Jakarta': 'ID', 'Asia/Manila': 'PH', 'Asia/Ho_Chi_Minh': 'VN',
+  'Asia/Shanghai': 'CN', 'Asia/Hong_Kong': 'HK', 'Asia/Taipei': 'TW', 'Asia/Tokyo': 'JP', 'Asia/Seoul': 'KR', 'Australia/Sydney': 'AU', 'Australia/Melbourne': 'AU',
+  'Australia/Brisbane': 'AU', 'Australia/Perth': 'AU', 'Australia/Adelaide': 'AU', 'Pacific/Auckland': 'NZ', 'Africa/Johannesburg': 'ZA', 'Africa/Lagos': 'NG', 'Africa/Nairobi': 'KE', 'Africa/Casablanca': 'MA',
+};
+const REGIONS = {
+  'Middle East': 'AE SA QA KW BH OM JO LB IL IQ IR SY YE EG TR PS',
+  'Europe': 'GB IE FR DE ES PT IT NL BE LU CH AT DK SE NO FI IS PL CZ SK HU RO BG GR HR SI RS BA ME MK AL UA BY MD LT LV EE CY MT RU',
+  'North America': 'US CA MX',
+  'Latin America': 'BR AR CL CO PE VE EC BO PY UY CR PA GT HN SV NI DO CU PR JM TT',
+  'Asia-Pacific': 'IN PK BD LK NP CN HK TW JP KR SG MY TH VN PH ID AU NZ KH MM MO',
+  'Africa': 'ZA NG KE MA DZ TN GH ET UG TZ CI SN CM AO ZW ZM MU NA BW RW LY SD',
+};
+const myCountry = (() => {
+  const p = (params.get('country') || '').toUpperCase(); if (/^[A-Z]{2}$/.test(p)) return p;
+  const tz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return ''; } })();
+  return TZ_COUNTRY[tz] || (navigator.language.split('-')[1] || 'US').toUpperCase();
+})();
+const myRegion = Object.entries(REGIONS).find(([, l]) => l.split(' ').includes(myCountry))?.[0] || null;
+
 function renderKpis() {
-  const day = stories().filter(s => Date.now() - s.d < DAY);
-  const kev7 = kevList().filter(k => Date.now() - Date.parse(k.d + 'T23:59:59Z') < 7 * DAY).length;
-  const rw24 = D.rw ? D.rw.recent.filter(v => Date.now() - v.d < DAY).length : null;
-  const zd = day.filter(s => s.tg.includes('zeroday')).length;
-  const k = [
-    [num(day.length), 'stories · 24h'],
-    [num(zd), 'zero-days', zd > 0],
-    [num(day.filter(s => s.tg.includes('breach')).length), 'breaches'],
-    ...(stackMode ? [] : [[rw24 == null ? '—' : num(rw24), 'ransomware']]),
-    [num(kev7), 'new KEV · 7d', kev7 > 0],
+  const m = D.rw?.totals?.month; if (!m) { $('#kpis').innerHTML = ''; return; }
+  const cur = Object.fromEntries(m.countries), prev = Object.fromEntries(m.prevToDate);
+  const inRegion = (o, r) => r ? REGIONS[r].split(' ').reduce((a, c) => a + (o[c] || 0), 0) : 0;
+  const sum = o => Object.values(o).reduce((a, b) => a + b, 0);
+  const delta = (now, before) => { if (!before) return now ? '<i class="up">new</i>' : ''; const p = Math.round((now - before) / before * 100); return p ? `<i class="${p > 0 ? 'up' : 'down'}">${p > 0 ? '▲' : '▼'} ${Math.abs(p)}%</i>` : '<i>±0%</i>'; };
+  const mStart = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1);
+  const alerts = allStories().filter(s => s.s === 'Hackmanac Alerts' && s.d >= mStart).map(alertCountry);
+  const regionGroups = {}; if (myRegion) for (const c of REGIONS[myRegion].split(' ')) for (const [g, n] of m.groups?.[c] || []) regionGroups[g] = (regionGroups[g] || 0) + n;
+  const topGroup = Object.entries(regionGroups).sort((a, b) => b[1] - a[1])[0];
+  const name = region?.of(myCountry) || myCountry, month = monthName();
+  const plural = (n, one, many) => `${num(n)} ${n === 1 ? one : many}`;
+  const mine = cur[myCountry] || 0, mineAlerts = alerts.filter(c => c === myCountry).length;
+  const parts = [
+    `<span class="k"><img class="flag" src="flags/${myCountry.toLowerCase()}.svg" alt="" onerror="this.remove()">${esc(name)} <b>${num(mine)}</b> ${mine === 1 ? 'ransomware claim' : 'ransomware claims'} ${delta(mine, prev[myCountry] || 0)}</span>`,
+    `<span class="k"><b>${num(mineAlerts)}</b> ${mineAlerts === 1 ? 'attack alert' : 'attack alerts'}</span>`,
+    ...(myRegion ? [`<span class="k">${esc(myRegion)} <b>${num(inRegion(cur, myRegion))}</b> claims ${delta(inRegion(cur, myRegion), inRegion(prev, myRegion))}</span>`] : []),
+    ...(topGroup ? [`<span class="k">most active <b>${esc(topGroup[0])}</b> ${plural(topGroup[1], 'claim', 'claims')}</span>`] : []),
+    `<span class="k">worldwide <b>${num(sum(cur))}</b> claims ${delta(sum(cur), sum(prev))}</span>`,
   ];
-  $('#kpis').innerHTML = k.map(([v, l, hot]) => `<div class="kpi${hot ? ' hot' : ''}"><b>${v}</b><span>${l}</span></div>`).join('');
+  $('#kpis').innerHTML = `<span class="h">${esc(month)} so far</span>` + parts.join('<span class="sep">·</span>');
+  $('#kpis').title = `Ransomware leak-site claims and Hackmanac attack alerts since 1 ${month}, compared with the same days last month. Country from your time zone; change it with ?country=XX in the address.`;
 }
 
 function renderLatest() {
@@ -127,12 +167,11 @@ function renderSpot() {
   const cves = s.cv.slice(0, 4).map(c => { const i = info[c] || {}; return `<span class="cvechip">${c}${i.s != null ? `<b class="sev ${esc(i.v)}">${i.s}</b>` : ''}</span>`; }).join('');
   const dev = (D.inc?.incidents || []).slice().sort((a, b) => b.last - a.last)[0];
   $('#spot').innerHTML = `<div class="slide">
-      <span class="kicker">${s.r.length ? `Covered by ${s.r.length + 1} outlets` : 'Top story'} · ${ago(s.d)} ago</span>
+      <span class="kicker">${s.r.length ? `Covered by ${s.r.length + 1} outlets` : 'Top story'} · ${ago(s.d)} ago${cves ? ` <span class="chips">${cves}</span>` : ''}</span>
       ${s.im && /^https?:\/\//.test(s.im) ? `<img class="img" src="${esc(s.im)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
       <h3>${esc(s.t)}</h3>
       ${s.x ? `<p>${esc(clip(s.x, 320))}</p>` : ''}
       <div class="meta">${esc(s.s)}${s.r.length ? ` · ${esc(s.r.slice(0, 3).map(r => r[0]).join(', '))}${s.r.length > 3 ? ` +${s.r.length - 3}` : ''}` : ''}</div>
-      ${cves ? `<div class="chips">${cves}</div>` : ''}
     </div>
     <div class="dots" style="--rot:${ROTATE}ms">${list.map((_, i) => `<i class="${i === spotIdx ? 'on' : ''}"></i>`).join('')}</div>
     ${dev && !stackMode ? `<div class="dev">Developing: <b>${esc(dev.title)}</b> · ${dev.n} updates · latest ${ago(dev.last)} ago</div>` : ''}`;
@@ -178,15 +217,22 @@ const jitter = (key, r) => { let h = 0; for (const ch of key) h = (h * 31 + ch.c
 let mapEvents = [], mapIdx = 0;
 function renderMap() {
   const W = D.world; if (!W) { $('#map').innerHTML = '<p class="empty">Map unavailable.</p>'; return; }
-  const since = Date.now() - 3 * DAY, ev = [];
-  if (!stackMode) for (const v of D.rw?.recent || []) if (v.d > since && v.c && W.centers[v.c]) ev.push({ k: 'rw', c: v.c, d: v.d, who: v.g, what: v.t, where: v.x || region?.of(v.c) || v.c });
-  for (const s of stories()) {
-    if (s.s !== 'Hackmanac Alerts' || s.d < since) continue;
-    const m = s.t.match(/\(([^)]{2,40})\)/); const c = m && countryCode(m[1]);
-    if (c && W.centers[c]) ev.push({ k: 'hm', c, d: s.d, who: 'Hackmanac', what: s.t, where: region?.of(c) || m[1] });
-  }
-  ev.sort((a, b) => b.d - a.d);
-  mapEvents = ev.slice(0, 120);
+  // Attacks aren't tied to products, so the map always shows global activity (also in My stack mode).
+  // On quiet days the window widens from 72 hours to 7 days so the map is never empty.
+  const collect = since => {
+    const ev = [];
+    for (const v of D.rw?.recent || []) if (v.d > since && v.c && W.centers[v.c]) ev.push({ k: 'rw', c: v.c, d: v.d, who: v.g, what: v.t, where: region?.of(v.c) || v.c });
+    for (const s of allStories()) {
+      if (s.s !== 'Hackmanac Alerts' || s.d < since) continue;
+      const c = alertCountry(s);
+      if (c && W.centers[c]) ev.push({ k: 'hm', c, d: s.d, who: 'Hackmanac', what: s.t, where: region?.of(c) || c });
+    }
+    return ev.sort((a, b) => b.d - a.d);
+  };
+  let ev = collect(Date.now() - 3 * DAY), span = '72 h';
+  if (ev.length < 25) { ev = collect(Date.now() - 7 * DAY); span = '7 days'; }
+  mapEvents = ev.slice(0, 150);
+  $('.p-map h2').firstChild.textContent = `Attacks · last ${span} `;
   // Shade countries by the last 7 days of ransomware claims.
   const counts = Object.fromEntries(D.rw?.countries7 || []), max = Math.max(1, ...Object.values(counts));
   const tier = c => { const n = counts[c]; if (!n) return ''; const r = n / max; return r > 0.5 ? 't4' : r > 0.2 ? 't3' : r > 0.07 ? 't2' : 't1'; };
@@ -194,27 +240,39 @@ function renderMap() {
   const dots = mapEvents.slice().reverse().map((e, i) => { const [x, y] = W.centers[e.c], [dx, dy] = jitter(e.what, 14); return `<circle class="p ${e.k}${Date.now() - e.d < 6 * HOUR ? ' fresh' : ''}" cx="${(x + dx).toFixed(1)}" cy="${(y + dy).toFixed(1)}" r="${Date.now() - e.d < 6 * HOUR ? 5.5 : 3.8}"/>`; }).join('');
   $('#map').innerHTML = `<svg viewBox="0 0 ${W.w} ${W.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="World map of recent attacks">${land}<g>${dots}</g><g id="map-ring"></g></svg>`;
   const rwN = mapEvents.filter(e => e.k === 'rw').length, hmN = mapEvents.length - rwN;
-  $('#map-n').textContent = stackMode ? `${hmN} alerts` : `${rwN} claims · ${hmN} alerts`;
+  $('#map-n').textContent = `${rwN} claims · ${hmN} alerts`;
+  // Most targeted countries this month (ransomware claims).
+  const top = (D.rw?.totals?.month?.countries || []).slice(0, 5);
+  $('#map-top').innerHTML = top.length ? `<span class="lbl">Most targeted · ${esc(monthName())}</span>${top.map(([c, n]) => `<span class="mt"><img src="flags/${esc(c.toLowerCase())}.svg" alt="" onerror="this.remove()">${esc(region?.of(c) || c)} <b>${num(n)}</b></span>`).join('')}` : '';
   mapIdx = 0; spotlightEvent();
 }
+const monthName = () => new Date().toLocaleDateString([], { month: 'long' });
+// Hackmanac alert titles end the victim with "(Country)".
+const alertCountry = s => { const m = s.t.match(/\(([^)]{2,40})\)/); return m ? countryCode(m[1]) : null; };
 // Every few seconds, highlight one of the newest attacks with a ring and a caption.
 function spotlightEvent() {
-  const W = D.world, list = mapEvents.slice(0, 12); if (!W || !list.length) { $('#map-cap').innerHTML = '<span class="empty">No attacks recorded in the last 72 hours.</span>'; return; }
+  const W = D.world, list = mapEvents.slice(0, 15); if (!W || !list.length) { $('#map-cap').innerHTML = '<span class="empty">No attacks recorded in the last 72 hours.</span>'; return; }
   const e = list[mapIdx % list.length]; mapIdx++;
   const [x, y] = W.centers[e.c], [dx, dy] = jitter(e.what, 14);
   const ring = $('#map-ring'); if (ring) ring.innerHTML = `<circle class="ring" cx="${(x + dx).toFixed(1)}" cy="${(y + dy).toFixed(1)}" r="5"/>`;
   $('#map-cap').innerHTML = `<b style="color:${e.k === 'rw' ? 'var(--violet)' : 'var(--accent)'}">${esc(e.who)}</b>${e.k === 'rw' ? `claimed <strong>${esc(e.what)}</strong>` : esc(e.what.replace(/\s*\([^)]*\)/, ''))} · ${esc(e.where)}<span class="when">${ago(e.d)} ago</span>`;
 }
-setInterval(spotlightEvent, 6000);
+setInterval(spotlightEvent, 4000);
 
 // ---------- vendor status ----------
 // Public Statuspage endpoints (they allow cross-site reads). Palo Alto's page covers Cortex, Prisma Access and Cloud NGFW.
+// Google publishes its own incident JSON; AWS and Azure come from data/status.json (collected by the build,
+// because their feeds can't be read cross-site).
 const VENDORS = [
   { n: 'Palo Alto Networks', sub: 'Cortex · Prisma · NGFW', host: 'status.paloaltonetworks.com', match: ['Palo Alto Networks'] },
   { n: 'Fortinet', sub: 'FortiCloud', host: 'status.forticloud.com', match: ['Fortinet'] },
   { n: 'Check Point', sub: 'Infinity', host: 'status.checkpoint.com', match: ['Check Point'] },
   { n: 'SentinelOne', host: 'status.sentinelone.com', match: ['SentinelOne'] },
   { n: 'Cisco Duo', host: 'status.duo.com', match: ['Cisco', 'Duo'] },
+  { n: 'Cisco Meraki', host: 'status.meraki.net', match: ['Cisco', 'Meraki'] },
+  { n: 'Ivanti', sub: 'Ivanti Cloud', host: 'status.ivanticloud.com', match: ['Ivanti'] },
+  { n: 'Google Cloud', google: 'https://status.cloud.google.com', match: ['Google'] },
+  { n: 'Google Workspace', google: 'https://www.google.com/appsstatus/dashboard', match: ['Google'] },
   { n: 'Cloudflare', host: 'www.cloudflarestatus.com', match: ['Cloudflare'] },
   { n: 'Tenable', host: 'status.tenable.com', match: ['Tenable'] },
   { n: 'Rapid7', host: 'status.rapid7.com', match: ['Rapid7'] },
@@ -222,9 +280,18 @@ const VENDORS = [
   { n: 'Wiz', host: 'status.wiz.io', match: ['Wiz'] },
   { n: 'Imperva', host: 'status.imperva.com', match: ['Imperva', 'Thales'] },
 ];
-const SEV = { critical: 4, major: 3, minor: 2, maint: 1, none: 0, unknown: -1 };
-const vMine = v => v.match.some(m => stack.vendors.some(s => s.toLowerCase() === m.toLowerCase()));
+const SEV = { critical: 4, major: 3, minor: 2, maint: 1, none: 0, unknown: -1, nosource: -2 };
+const vMine = v => (v.match || []).some(m => stack.vendors.some(s => s.toLowerCase() === m.toLowerCase()));
+async function googleStatus(v) {
+  try {
+    const list = await (await fetch(`${v.google}/incidents.json`, { signal: AbortSignal.timeout(15000), cache: 'no-cache' })).json();
+    const open = list.filter(i => !i.end);
+    const worst = open.some(i => i.severity === 'high') ? 'major' : open.length ? 'minor' : 'none';
+    return { ...v, url: v.google, s: worst, label: open.length ? `${open.length} open incident${open.length > 1 ? 's' : ''}` : 'Operational', inc: open[0]?.external_desc || '', more: Math.max(0, open.length - 1), affected: [...new Set(open.flatMap(i => (i.affected_products || []).map(p => p.title)))], ok: true };
+  } catch { return { ...v, url: v.google, s: 'unknown', label: 'Status unavailable', inc: '', more: 0, affected: [], ok: false }; }
+}
 async function vendorStatus(v) {
+  if (v.google) return googleStatus(v);
   try {
     const r = await fetch(`https://${v.host}/api/v2/summary.json`, { signal: AbortSignal.timeout(15000), cache: 'no-cache' });
     if (!r.ok) throw new Error(r.status);
@@ -236,17 +303,24 @@ async function vendorStatus(v) {
     const affected = [...new Set(comps.filter(c => c.status !== 'operational' && !c.group).map(c => (byId[c.group_id] || c).name))];
     let s = j.status?.indicator || 'none';
     if (s === 'maintenance' || (s === 'none' && maint.length)) s = 'maint';
-    return { ...v, s, label: j.status?.description || 'Unknown', inc: open[0]?.name || maint[0]?.name || '', more: Math.max(0, open.length - 1), affected, ok: true };
-  } catch { return { ...v, s: 'unknown', label: 'Status unavailable', inc: '', more: 0, affected: [], ok: false }; }
+    return { ...v, url: `https://${v.host}`, s, label: j.status?.description || 'Unknown', inc: open[0]?.name || maint[0]?.name || '', more: Math.max(0, open.length - 1), affected, ok: true };
+  } catch { return { ...v, url: `https://${v.host}`, s: 'unknown', label: 'Status unavailable', inc: '', more: 0, affected: [], ok: false }; }
 }
 let statusAt = 0;
 async function loadStatus() {
-  const list = await Promise.all(VENDORS.filter(v => !stackMode || !hasStack || vMine(v)).map(vendorStatus));
-  list.sort((a, b) => SEV[b.s] - SEV[a.s] || vMine(b) - vMine(a) || a.n.localeCompare(b.n));
+  const built = await getJSON('status.json').then(j => j.vendors).catch(() => []);
+  let list = [...await Promise.all(VENDORS.map(vendorStatus)), ...built];
+  if (stackMode && hasStack) {
+    // Every vendor in your stack gets a row (those without a public status page say so); others only when they have issues.
+    const covered = new Set(list.filter(vMine).flatMap(v => v.match.filter(m => stack.vendors.some(s => s.toLowerCase() === m.toLowerCase())).map(m => m.toLowerCase())));
+    const missing = stack.vendors.filter(s => !covered.has(s.toLowerCase())).map(s => ({ n: s, s: 'nosource', label: 'No public status page', inc: '', more: 0, affected: [], match: [s] }));
+    list = [...list.filter(v => vMine(v) || SEV[v.s] >= 2), ...missing];
+  }
+  list.sort((a, b) => (stackMode ? vMine(b) - vMine(a) : 0) || SEV[b.s] - SEV[a.s] || vMine(b) - vMine(a) || a.n.localeCompare(b.n));
   statusAt = Date.now();
-  const short = { none: 'Operational', minor: 'Degraded', major: 'Outage', critical: 'Major outage', maint: 'Maintenance', unknown: 'Unavailable' };
-  $('#status').innerHTML = list.map(v => `<li class="s-${v.s}" title="${esc(v.label)}"><span class="sd"></span>
-      <span class="nm"><a href="https://${v.host}" target="_blank" rel="noopener">${vMine(v) ? '<span class="mine">★ </span>' : ''}${esc(v.n)}</a>${v.sub ? `<small>${esc(v.sub)}</small>` : ''}</span>
+  const short = { none: 'Operational', minor: 'Degraded', major: 'Outage', critical: 'Major outage', maint: 'Maintenance', unknown: 'Unavailable', nosource: 'No status page' };
+  $('#status').innerHTML = list.map(v => `<li class="s-${v.s === 'nosource' ? 'unknown' : v.s}" title="${esc(v.label)}"><span class="sd"></span>
+      <span class="nm">${v.url ? `<a href="${esc(v.url)}" target="_blank" rel="noopener">` : '<span>'}${vMine(v) ? '<span class="mine">★ </span>' : ''}${esc(v.n)}${v.url ? '</a>' : '</span>'}${v.sub ? `<small>${esc(v.sub)}</small>` : ''}</span>
       <span class="st">${short[v.s]}</span>
       ${v.inc || v.affected.length ? `<span class="inc">${esc(v.inc)}${v.more ? ` <em>+${v.more} more</em>` : ''}${v.affected.length ? ` <em>· ${esc(clip(v.affected.slice(0, 3).join(', '), 70))}</em>` : ''}</span>` : ''}</li>`).join('')
     || '<li class="empty">None of your vendors have a public status page here.</li>';

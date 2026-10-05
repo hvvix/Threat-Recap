@@ -22,10 +22,11 @@
 [hidden] { display: none !important; }
 html, body { height: 100%; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 400 1rem/1.4 var(--font); overflow: hidden; }
-#wall { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 0.9rem; padding: 1rem 1.2rem 0; transition: transform 2s ease; }
+#wall { height: 100vh; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 0.9rem; padding: 1rem 1.2rem 0; transition: transform 2s ease; }
 
 /* Header */
-.top { display: flex; align-items: center; gap: 1.4rem; }
+.top { display: flex; align-items: center; gap: 1.2rem; min-width: 0; }
+.brand, .live, .clock, .ctl { flex: none; } .brand b { white-space: nowrap; } .clock .t, .clock .d { white-space: nowrap; }
 .brand { display: flex; align-items: center; gap: 0.7rem; }
 .brand img { width: 2.4rem; height: 2.4rem; border-radius: 0.5rem; box-shadow: 0 0 0 1px var(--line); }
 .brand b { font: 700 1.55rem/1 var(--serif); letter-spacing: -0.01em; }
@@ -52,12 +53,15 @@ body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transit
 .panel h2 .right { margin-left: auto; letter-spacing: 0.04em; text-transform: none; color: var(--dim); }
 .p-latest { grid-area: latest; } .p-spot { grid-area: spot; } .p-status { grid-area: status; } .p-map { grid-area: map; } .p-exp { grid-area: exp; }
 
-/* Header numbers (last 24 hours) */
-.kpis { display: flex; gap: 1.4rem; align-items: baseline; }
-.kpi { display: flex; flex-direction: column; align-items: flex-end; }
-.kpi b { font: 600 1.45rem/1 var(--mono); font-variant-numeric: tabular-nums; }
-.kpi span { font: 500 0.66rem var(--mono); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 0.2rem; white-space: nowrap; }
-.kpi.hot b { color: var(--red); }
+/* This month in your country and region: one line under the header */
+.strip { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 1.3rem; padding: 0.55rem 1rem; border: 1px solid var(--line); border-radius: 0.6rem; background: var(--panel); font-size: 0.95rem; min-width: 0; }
+.strip:empty { display: none; }
+.strip .h { font: 600 0.72rem var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.strip .k { display: inline-flex; align-items: baseline; gap: 0.4rem; white-space: nowrap; color: var(--muted); }
+.strip .k b { font: 600 1.15rem var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
+.strip .k i { font: 600 0.72rem var(--mono); font-style: normal; color: var(--muted); } .strip .k i.up { color: var(--red); } .strip .k i.down { color: var(--green); }
+.strip .flag { width: 1.3rem; height: 0.95rem; object-fit: cover; border-radius: 2px; align-self: center; }
+.strip .sep { color: var(--line); }
 
 /* Vendor status */
 .vendors li { display: grid; grid-template-columns: 0.75rem 1fr auto; gap: 0.1rem 0.6rem; align-items: baseline; padding: 0.42rem 0; border-top: 1px solid var(--line); }
@@ -92,6 +96,9 @@ body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transit
 .map-cap { font-size: 0.9rem; min-height: 2.6em; padding-top: 0.3rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .map-cap b { font: 600 0.75rem var(--mono); text-transform: uppercase; letter-spacing: 0.06em; margin-right: 0.4rem; }
 .map-cap .when { color: var(--muted); font: 500 0.78rem var(--mono); margin-left: 0.4rem; }
+.map-top { display: flex; flex-wrap: wrap; gap: 0.25rem 0.9rem; align-items: center; font-size: 0.82rem; padding-top: 0.35rem; border-top: 1px solid var(--line); margin-top: 0.3rem; }
+.map-top .lbl { font: 600 0.68rem var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.map-top .mt { display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; } .map-top img { width: 1.1rem; height: 0.8rem; object-fit: cover; border-radius: 2px; } .map-top b { font: 600 0.8rem var(--mono); color: var(--violet); }
 .legend { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; font: 500 0.68rem var(--mono); color: var(--dim); padding-top: 0.3rem; }
 .legend .dot { display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; margin-right: 0.35rem; vertical-align: -0.05rem; }
 .dot.rw { background: var(--violet); } .dot.hm { background: var(--accent); }
@@ -113,14 +120,15 @@ body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transit
 .b-new { color: var(--accent); } .b-zd { color: var(--red); } .b-breach { color: var(--amber); } .b-rw { color: var(--violet); } .b-kev { color: var(--red); background: color-mix(in srgb, var(--red) 14%, transparent); } .b-n { color: var(--blue); }
 
 /* Spotlight */
-.p-spot .slide { flex: 1; display: flex; flex-direction: column; gap: 0.7rem; min-height: 0; animation: fade 0.8s ease; }
+.p-spot .slide { flex: 1; display: flex; flex-direction: column; gap: 0.6rem; min-height: 0; overflow: hidden; animation: fade 0.8s ease; }
 @keyframes fade { from { opacity: 0; transform: translateY(0.4rem); } }
 .p-spot .kicker { font: 600 0.78rem var(--mono); letter-spacing: 0.12em; color: var(--accent); text-transform: uppercase; }
 .p-spot .img { width: 100%; aspect-ratio: 16 / 6; object-fit: cover; border-radius: 0.4rem; background: var(--line); max-height: 24%; flex: none; }
-.p-spot h3 { margin: 0; font: 700 1.6rem/1.2 var(--serif); letter-spacing: -0.01em; flex: none; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.p-spot h3 { margin: 0; font: 700 1.5rem/1.2 var(--serif); letter-spacing: -0.01em; flex: none; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .p-spot p { margin: 0; color: var(--muted); font-size: 1rem; min-height: 0; flex: none; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.p-spot .meta { font: 500 0.8rem var(--mono); color: var(--muted); }
-.p-spot .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.p-spot .meta { font: 500 0.8rem var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: none; }
+.p-spot .chips { display: inline-flex; flex-wrap: wrap; gap: 0.4rem; margin-left: 0.5rem; vertical-align: 0.05rem; letter-spacing: 0; }
+.p-spot .kicker .cvechip { color: var(--text); font-size: 0.72rem; }
 .cvechip { font: 600 0.8rem var(--mono); border: 1px solid var(--line); border-radius: 0.3rem; padding: 0.12rem 0.45rem; }
 .cvechip b { margin-left: 0.35rem; }
 .dots { display: flex; gap: 0.35rem; margin-top: auto; padding-top: 0.6rem; }
@@ -189,17 +197,17 @@ body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transit
   <header class="top">
     <div class="brand"><img src="icon.svg" alt=""><b>Threat Recap</b></div>
     <span class="live" id="live"><i></i><span id="live-txt">LIVE</span></span>
-    <span class="fresh" id="fresh">Loading…</span>
+    <span class="fresh" id="fresh"></span>
     <span class="spacer"></span>
-    <div class="kpis" id="kpis" title="Last 24 hours"></div>
     <div class="ctl"><button id="b-full" title="Full screen (F)">Full screen</button><button id="b-theme" title="Light / dark (T)">Theme</button><a href="./" style="display:contents"><button>Exit</button></a></div>
     <div class="clock"><div class="t" id="clock">--:--</div><div class="d" id="date"></div></div>
   </header>
+  <div class="strip" id="kpis"></div>
   <main class="grid">
     <section class="panel p-latest"><h2>Latest <span class="right" id="latest-n"></span></h2><ul class="list news" id="latest"></ul></section>
     <section class="panel p-spot"><h2>Top stories · last 24 h</h2><div id="spot" style="display:flex;flex-direction:column;flex:1;min-height:0"></div></section>
     <section class="panel p-status"><h2>Vendor status <span class="right" id="status-n">checking…</span></h2><ul class="list vendors" id="status"></ul><div class="note">From each vendor's public status page, checked every 3 minutes.</div></section>
-    <section class="panel p-map"><h2>Attacks · last 72 h <span class="right" id="map-n"></span></h2><div class="map" id="map"></div><div class="map-cap" id="map-cap"></div>
+    <section class="panel p-map"><h2>Attacks · last 72 h <span class="right" id="map-n"></span></h2><div class="map" id="map"></div><div class="map-cap" id="map-cap"></div><div class="map-top" id="map-top"></div>
       <div class="legend"><span><i class="dot rw"></i>Ransomware claim</span><span><i class="dot hm"></i>Hackmanac alert</span><span class="muted">Claims by criminal groups are unverified.</span></div></section>
     <section class="panel p-exp"><h2 class="tabs"><span data-pane="kev">Newly exploited · KEV</span><span data-pane="zd">Zero-days · 72 h</span><span class="right" id="exp-n"></span></h2>
       <ul class="list rows" id="kev"></ul><ul class="list rows" id="zd" hidden></ul><div class="dots" id="exp-dots" style="--rot:20000ms"><i></i><i></i></div></section>
