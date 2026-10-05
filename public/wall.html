@@ -22,7 +22,7 @@
 [hidden] { display: none !important; }
 html, body { height: 100%; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 400 1rem/1.4 var(--font); overflow: hidden; }
-#wall { height: 100vh; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 0.9rem; padding: 1rem 1.2rem 0; transition: transform 2s ease; }
+#wall { height: 100vh; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 1.2rem; padding: 1.3rem 1.7rem 0; transition: transform 2s ease; }
 
 /* Header */
 .top { display: flex; align-items: center; gap: 1.2rem; min-width: 0; }
@@ -45,16 +45,16 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 400 1rem/1.4 
 body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transition: opacity 0.6s; }
 
 /* Grid of panels */
-.grid { display: grid; min-height: 0; gap: 0.9rem; grid-template-columns: 1.25fr 1fr 1fr; grid-template-rows: minmax(0, 0.92fr) minmax(0, 1.08fr);
+.grid { display: grid; min-height: 0; gap: 1.25rem; grid-template-columns: 1.25fr 1fr 1fr; grid-template-rows: minmax(0, 0.92fr) minmax(0, 1.08fr);
   grid-template-areas: "latest spot alerts" "latest map exp"; }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 0.6rem; padding: 0.9rem 1rem; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
-.panel h2 { margin: 0 0 0.6rem; font: 600 0.78rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 0.5rem; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 0.7rem; padding: 1.2rem 1.35rem; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.panel h2 { margin: 0 0 1rem; font: 600 0.78rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 0.5rem; }
 .panel h2 .n { color: var(--text); }
-.panel h2 .right { margin-left: auto; letter-spacing: 0.04em; text-transform: none; color: var(--dim); }
+.panel h2 .right { white-space: nowrap; margin-left: auto; letter-spacing: 0.04em; text-transform: none; color: var(--dim); }
 .p-latest { grid-area: latest; } .p-spot { grid-area: spot; } .p-alerts { grid-area: alerts; } .p-map { grid-area: map; } .p-exp { grid-area: exp; }
 
 /* This month in your country and region: one line under the header */
-.strip { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 1.3rem; padding: 0.55rem 1rem; border: 1px solid var(--line); border-radius: 0.6rem; background: var(--panel); font-size: 0.95rem; min-width: 0; }
+.strip { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 1.6rem; padding: 0.75rem 1.35rem; border: 1px solid var(--line); border-radius: 0.6rem; background: var(--panel); font-size: 0.95rem; min-width: 0; }
 .strip:empty { display: none; }
 .strip .h { font: 600 0.72rem var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
 .strip .k { display: inline-flex; align-items: baseline; gap: 0.4rem; white-space: nowrap; color: var(--muted); }
@@ -66,14 +66,14 @@ body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transit
 .strip a { color: inherit; text-decoration: none; } .strip .src { margin-left: auto; font: 500 0.72rem var(--mono); color: var(--dim); }
 
 /* Hackmanac attack alerts */
-.alerts li { display: grid; grid-template-columns: 1.6rem 1fr auto; gap: 0.1rem 0.6rem; align-items: baseline; padding: 0.5rem 0; border-top: 1px solid var(--line); }
+.alerts li { display: grid; grid-template-columns: 1.6rem 1fr auto; gap: 0.2rem 0.7rem; align-items: baseline; padding: 0.8rem 0; border-top: 1px solid var(--line); }
 .alerts li:first-child { border-top: 0; padding-top: 0; }
 .alerts img { width: 1.5rem; height: 1.1rem; object-fit: cover; border-radius: 2px; align-self: center; }
 .alerts .who { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .alerts .who small { font: 500 0.72rem var(--mono); color: var(--muted); margin-left: 0.4rem; text-transform: uppercase; letter-spacing: 0.06em; }
 .alerts .when { font: 500 0.78rem var(--mono); color: var(--muted); white-space: nowrap; }
 .alerts li.new .when { color: var(--accent); }
-.alerts .what { grid-column: 2 / 4; font-size: 0.88rem; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.alerts .what { grid-column: 2 / 4; font-size: 0.88rem; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .alerts .what b { color: var(--text); font-weight: 600; }
 
 /* Attack map (time-lapse replay) */
@@ -119,7 +119,7 @@ body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transit
 .list { list-style: none; margin: 0; padding: 0; overflow: hidden; flex: 1; min-height: 0; }
 
 /* Latest headlines */
-.news li { display: grid; grid-template-columns: 3.3rem 1fr; gap: 0.15rem 0.7rem; padding: 0.55rem 0; border-top: 1px solid var(--line); }
+.news li { display: grid; grid-template-columns: 3.3rem 1fr; gap: 0.25rem 0.8rem; padding: 0.85rem 0; border-top: 1px solid var(--line); }
 .news li:first-child { border-top: 0; padding-top: 0.1rem; }
 .news .age { font: 500 0.82rem var(--mono); color: var(--muted); padding-top: 0.2rem; font-variant-numeric: tabular-nums; }
 .news .src { font: 600 0.72rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
@@ -155,7 +155,7 @@ body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transit
 .tile.hot .v { color: var(--red); }
 
 /* KEV + zero-days */
-.rows li { padding: 0.5rem 0; border-top: 1px solid var(--line); }
+.rows li { padding: 0.8rem 0; border-top: 1px solid var(--line); }
 .rows li:first-child { border-top: 0; padding-top: 0; }
 .rows .l1 { display: flex; align-items: center; gap: 0.5rem; font: 600 0.82rem var(--mono); flex-wrap: wrap; }
 .rows .l1 .when { margin-left: auto; color: var(--muted); font-weight: 500; }
@@ -219,7 +219,7 @@ body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transit
     <section class="panel p-map"><h2>Attacks · last 72 h <span class="right" id="map-n"></span></h2><div class="map" id="map"></div>
       <div class="timeline"><div class="tl-bar"><i id="map-ph"></i></div><span id="map-clock"></span></div>
       <div class="map-top" id="map-top"></div>
-      <div class="legend"><span><i class="dot rw"></i>Ransomware claim</span><span><i class="dot hm"></i>Hackmanac alert</span><span>Replay of reported attacks · origins unknown · claims unverified</span></div></section>
+      <div class="legend" title="The replay shows when attacks were reported; where they came from isn't known. Claims by attackers are unverified."><span><i class="dot rw"></i>Ransomware claim</span><span><i class="dot hm"></i>Hackmanac alert</span><span>origins unknown · claims unverified</span></div></section>
     <section class="panel p-exp"><h2 class="tabs"><span data-pane="kev">Newly exploited · KEV</span><span data-pane="zd">Zero-days · 72 h</span><span class="right" id="exp-n"></span></h2>
       <ul class="list rows" id="kev"></ul><ul class="list rows" id="zd" hidden></ul><div class="dots" id="exp-dots" style="--rot:20000ms"><i></i><i></i></div></section>
   </main>

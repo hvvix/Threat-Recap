@@ -15,11 +15,24 @@ const PORT = Number(process.env.PORT || 3000);
 const EVERY = Number(process.env.REBUILD_MINUTES || 20) * 60 * 1000;
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml; charset=utf-8' };
 
-let building = false;
+// Each rebuild's output goes to server.log (not the console, which may be gone if the server was started
+// in the background); a rebuild that hangs is stopped after 15 minutes so the next one can run.
+const LOG = path.join(ROOT, 'server.log');
+let building = null;
 function build() {
-  if (building) return; building = true;
-  const p = spawn(process.execPath, [path.join(ROOT, 'build.js')], { stdio: 'inherit', env: process.env });
-  p.on('exit', code => { building = false; if (code) console.error(`build exited with code ${code}`); });
+  if (building) return;
+  const log = fs.openSync(LOG, 'a');
+  fs.writeSync(log, `\n=== rebuild ${new Date().toISOString()} ===\n`);
+  const p = spawn(process.execPath, [path.join(ROOT, 'build.js')], { stdio: ['ignore', log, log], env: process.env, windowsHide: true });
+  const guard = setTimeout(() => { fs.appendFileSync(LOG, 'rebuild took over 15 minutes; stopping it\n'); p.kill(); }, 15 * 60 * 1000);
+  building = p;
+  const done = msg => {
+    if (building !== p) return;                 // 'exit' and 'error' can both fire
+    clearTimeout(guard); building = null; fs.closeSync(log);
+    if (msg) { fs.appendFileSync(LOG, msg + '\n'); try { console.error(msg); } catch {} }
+  };
+  p.on('exit', code => done(code ? `build exited with code ${code}` : ''));
+  p.on('error', e => done(`build could not start: ${e.message}`));
 }
 
 http.createServer((req, res) => {

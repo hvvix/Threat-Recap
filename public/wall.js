@@ -82,8 +82,8 @@ const TAGS = [['zeroday', 'Zero-day', 'b-zd'], ['breach', 'Breach', 'b-breach'],
 const badges = s => {
   const out = TAGS.filter(([t]) => s.tg.includes(t)).map(([, l, c]) => `<span class="badge ${c}">${l}</span>`);
   if (s.cv.some(c => D.cves.kevIndex?.[c])) out.push('<span class="badge b-kev">KEV</span>');
-  if (s.r.length) out.push(`<span class="badge b-n">${s.r.length + 1} outlets</span>`);
-  return out.join('');
+  if (s.r.length > 1) out.push(`<span class="badge b-n">${s.r.length + 1} outlets</span>`);
+  return out.slice(0, isNew(s) ? 1 : 2).join('');
 };
 const isNew = s => Date.now() - (s.f || s.d) < 45 * MIN;
 const allStories = () => D.news.stories.filter(s => !s.b && !s.so);
@@ -103,7 +103,6 @@ function renderStrip() {
   const parts = [];
   if (m) parts.push(`<span class="h">Hack Tuesday</span><a href="${esc(ht.u)}" target="_blank" rel="noopener"><span class="k">${esc(m[1])}</span> <span class="k"><span class="big">${esc(m[2])}</span> verified cyber attacks across <b>${esc(m[3])}</b> countries</span></a>`);
   parts.push(`<span class="k">alerts posted this week <b>${num(week)}</b>${countries ? ` in ${countries} countr${countries === 1 ? 'y' : 'ies'}` : ''}</span>`);
-  parts.push(`<span class="k">last 24 h <b>${num(day)}</b></span>`);
   $('#kpis').innerHTML = parts.join('<span class="sep">·</span>') + '<span class="src">Source: Hackmanac</span>';
   $('#kpis').title = "Hack Tuesday is Hackmanac's weekly count of verified cyber attacks worldwide.";
 }
@@ -232,7 +231,7 @@ function renderMap() {
   const dots = mapEvents.map(e => `<circle id="ev${e.i}" class="p ${e.k}" cx="${e.x.toFixed(1)}" cy="${e.y.toFixed(1)}" r="4.6"><title>${esc(e.who)} → ${esc(e.what)} · ${esc(e.where)} · ${ago(e.d)} ago</title></circle>`).join('');
   $('#map').innerHTML = `<svg viewBox="0 0 ${W.w} ${W.h}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Replay of attacks reported in the last ${span > 3 * DAY ? '7 days' : '72 hours'}">${land}<g id="map-dots">${dots}</g><g id="map-fx"></g></svg><ul class="map-feed" id="map-feed"></ul>`;
 
-  const top = (D.rw?.totals?.month?.countries || []).slice(0, 4);
+  const top = (D.rw?.totals?.month?.countries || []).slice(0, 3);
   $('#map-top').innerHTML = top.length ? `<span class="lbl">Most targeted · ${esc(monthName())}</span>${top.map(([c, n]) => `<span class="mt"><img src="flags/${esc(c.toLowerCase())}.svg" alt="" onerror="this.remove()">${esc(region?.of(c) || c)} <b>${num(n)}</b></span>`).join('')}` : '';
   startReplay();
 }
