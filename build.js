@@ -19,7 +19,6 @@ import { writeArchive } from './archive.js';
 import { LANDMARKS } from './landmarks.js';
 import { writeSite } from './site.js';
 import { catRegex, PRODUCTS } from './topics.js';
-import { fetchStatus } from './status.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(ROOT, 'public', 'data');
@@ -140,6 +139,12 @@ export function postItems(items, src) {
     const raw = it.summary || it.title;
     if (!keep.test(raw)) return null;
     const flat = s => s.normalize('NFKC').replace(EMOJI, ' ').replace(/\s+/g, ' ').trim();
+    // Weekly summary posts ("Hack Tuesday: Week 23 - 29 Sep 2026 ⚠️458 cyber attacks across 74 countries ⚠️ More details: <url>").
+    const weekly = flat(raw).match(/Hack Tuesday:?\s*(Week\s+\d{1,2}\s*[-–]\s*\d{1,2}\s+[A-Za-z]+\s+\d{4})\D{0,10}(\d[\d,.]*)\s+cyber\s?attacks?\s+across\s+(\d+)\s+countries/i);
+    if (weekly) {
+      const more = raw.match(/https?:\/\/(?:www\.)?hackmanac\.com\/\S+/i)?.[0].replace(/[.,)]+$/, '');
+      return { ...it, title: `Hack Tuesday (${weekly[1].replace(/\s*[-–]\s*/, ' – ')}): ${weekly[2]} cyber attacks across ${weekly[3]} countries`, summary: flat(raw), link: more || it.link };
+    }
     const body = flat(raw).replace(new RegExp(`^(?:${src.posts})\\W*`, 'i'), '');
     const fancy = raw.match(FANCY_RUN);
     const name = fancy ? flat(fancy[0]).replace(/[\s,(-]+$/, '').replace(/(\w{2,})\.$/, '$1') : '';
@@ -737,7 +742,6 @@ async function main() {
   if (plugins.length) await writeJSON(path.join(OUT, 'plugins.json'), { generated, plugins });
   if (world) await writeJSON(path.join(OUT, 'world.json'), world);
   await writeJSON(path.join(OUT, 'supply.json'), { generated, advisories: supply });
-  try { const st = await fetchStatus(); await writeJSON(path.join(OUT, 'status.json'), st); log(`Vendor status: ${st.vendors.map(v => `${v.n} ${v.s}`).join(', ')}`); } catch (e) { log('Vendor status failed:', e.message); }
   const st = Object.fromEntries(status.map(s => [s.n, s]));
   if (ransomware) { try { await syncFlags(new Set([...(ransomware.totals?.countriesYtd || []).map(c => c[0]), ...ransomware.recent.map(v => v.c)])); } catch (e) { log('Flags failed:', e.message); } }
   let icons = {};

@@ -46,12 +46,12 @@ body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transit
 
 /* Grid of panels */
 .grid { display: grid; min-height: 0; gap: 0.9rem; grid-template-columns: 1.25fr 1fr 1fr; grid-template-rows: minmax(0, 1.05fr) minmax(0, 1fr);
-  grid-template-areas: "latest spot status" "latest map exp"; }
+  grid-template-areas: "latest spot alerts" "latest map exp"; }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 0.6rem; padding: 0.9rem 1rem; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .panel h2 { margin: 0 0 0.6rem; font: 600 0.78rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 0.5rem; }
 .panel h2 .n { color: var(--text); }
 .panel h2 .right { margin-left: auto; letter-spacing: 0.04em; text-transform: none; color: var(--dim); }
-.p-latest { grid-area: latest; } .p-spot { grid-area: spot; } .p-status { grid-area: status; } .p-map { grid-area: map; } .p-exp { grid-area: exp; }
+.p-latest { grid-area: latest; } .p-spot { grid-area: spot; } .p-alerts { grid-area: alerts; } .p-map { grid-area: map; } .p-exp { grid-area: exp; }
 
 /* This month in your country and region: one line under the header */
 .strip { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 1.3rem; padding: 0.55rem 1rem; border: 1px solid var(--line); border-radius: 0.6rem; background: var(--panel); font-size: 0.95rem; min-width: 0; }
@@ -62,24 +62,19 @@ body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transit
 .strip .k i { font: 600 0.72rem var(--mono); font-style: normal; color: var(--muted); } .strip .k i.up { color: var(--red); } .strip .k i.down { color: var(--green); }
 .strip .flag { width: 1.3rem; height: 0.95rem; object-fit: cover; border-radius: 2px; align-self: center; }
 .strip .sep { color: var(--line); }
+.strip .big { font: 600 1.2rem var(--mono); color: var(--accent); }
+.strip a { color: inherit; text-decoration: none; } .strip .src { margin-left: auto; font: 500 0.72rem var(--mono); color: var(--dim); }
 
-/* Vendor status */
-.vendors li { display: grid; grid-template-columns: 0.75rem 1fr auto; gap: 0.1rem 0.6rem; align-items: baseline; padding: 0.42rem 0; border-top: 1px solid var(--line); }
-.vendors li:first-child { border-top: 0; padding-top: 0; }
-.vendors .sd { width: 0.62rem; height: 0.62rem; border-radius: 50%; background: var(--green); align-self: center; }
-.vendors .nm { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.vendors .nm small { font-weight: 400; color: var(--dim); font-size: 0.75rem; margin-left: 0.35rem; }
-.vendors .st { font: 500 0.75rem var(--mono); color: var(--green); white-space: nowrap; }
-.vendors .inc { grid-column: 2 / 4; font-size: 0.85rem; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.vendors .inc em { font-style: normal; color: var(--muted); }
-.vendors li.s-minor .sd, .vendors li.s-maint .sd { background: var(--amber); } .vendors li.s-minor .st { color: var(--amber); }
-.vendors li.s-major .sd, .vendors li.s-critical .sd { background: var(--red); animation: halo 1.6s ease-out infinite; }
-@keyframes halo { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--red) 60%, transparent); } to { box-shadow: 0 0 0 0.5rem transparent; } }
-.vendors li.s-major .st, .vendors li.s-critical .st { color: var(--red); }
-.vendors li.s-maint .sd { background: var(--blue); } .vendors li.s-maint .st { color: var(--blue); }
-.vendors li.s-unknown .sd { background: var(--dim); } .vendors li.s-unknown .st { color: var(--dim); }
-.vendors .mine { color: var(--accent); }
-.vendors a { color: inherit; text-decoration: none; }
+/* Hackmanac attack alerts */
+.alerts li { display: grid; grid-template-columns: 1.6rem 1fr auto; gap: 0.1rem 0.6rem; align-items: baseline; padding: 0.5rem 0; border-top: 1px solid var(--line); }
+.alerts li:first-child { border-top: 0; padding-top: 0; }
+.alerts img { width: 1.5rem; height: 1.1rem; object-fit: cover; border-radius: 2px; align-self: center; }
+.alerts .who { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.alerts .who small { font: 500 0.72rem var(--mono); color: var(--muted); margin-left: 0.4rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.alerts .when { font: 500 0.78rem var(--mono); color: var(--muted); white-space: nowrap; }
+.alerts li.new .when { color: var(--accent); }
+.alerts .what { grid-column: 2 / 4; font-size: 0.88rem; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.alerts .what b { color: var(--text); font-weight: 600; }
 
 /* Attack map */
 .map { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
@@ -183,7 +178,7 @@ body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transit
 /* Narrow or portrait screens: stack the panels and allow scrolling. */
 @media (max-aspect-ratio: 4/3), (max-width: 900px) {
   body { overflow: auto; } #wall { height: auto; min-height: 100vh; }
-  .grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "status" "spot" "latest" "map" "exp"; }
+  .grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "alerts" "spot" "latest" "map" "exp"; }
   .map { aspect-ratio: 960 / 470; flex: none; } .kpis { order: 9; width: 100%; justify-content: space-between; gap: 0.6rem; } .kpi { align-items: flex-start; }
   .panel { min-width: 0; } .top { flex-wrap: wrap; gap: 0.6rem 1rem; } .ctl { display: none; } .clock .t { font-size: 1.6rem; }
   .tiles { grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); } #wall { padding-inline: 1rem; }
@@ -206,7 +201,7 @@ body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transit
   <main class="grid">
     <section class="panel p-latest"><h2>Latest <span class="right" id="latest-n"></span></h2><ul class="list news" id="latest"></ul></section>
     <section class="panel p-spot"><h2>Top stories · last 24 h</h2><div id="spot" style="display:flex;flex-direction:column;flex:1;min-height:0"></div></section>
-    <section class="panel p-status"><h2>Vendor status <span class="right" id="status-n">checking…</span></h2><ul class="list vendors" id="status"></ul><div class="note">From each vendor's public status page, checked every 3 minutes.</div></section>
+    <section class="panel p-alerts"><h2>Cyber attack alerts · Hackmanac <span class="right" id="alerts-n"></span></h2><ul class="list alerts" id="alerts"></ul><div class="note">From Hackmanac's cyber attack alerts (hackmanac.com). Claims by attackers are unverified.</div></section>
     <section class="panel p-map"><h2>Attacks · last 72 h <span class="right" id="map-n"></span></h2><div class="map" id="map"></div><div class="map-cap" id="map-cap"></div><div class="map-top" id="map-top"></div>
       <div class="legend"><span><i class="dot rw"></i>Ransomware claim</span><span><i class="dot hm"></i>Hackmanac alert</span><span class="muted">Claims by criminal groups are unverified.</span></div></section>
     <section class="panel p-exp"><h2 class="tabs"><span data-pane="kev">Newly exploited · KEV</span><span data-pane="zd">Zero-days · 72 h</span><span class="right" id="exp-n"></span></h2>
