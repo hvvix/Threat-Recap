@@ -32,7 +32,7 @@ jobs:
     if: ${{ vars.BUTTONDOWN_USER != '' }}
     env:
       KIND: ${{ inputs.kind || (github.event.schedule == '23 6 1 * *' && 'monthly') || 'weekly' }}
-      HIDE_SECTIONS: ${{ vars.HIDE_SECTIONS || 'plugins' }}
+      HIDE_SECTIONS: ${{ vars.HIDE_SECTIONS || 'plugins,wall' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

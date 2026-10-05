@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="robots" content="noindex">
+<title>Wall display · Threat Recap</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
+<style>
+/* Built for a screen that stays on: everything scales with the viewport (1920×1080 ≈ 17px base). */
+:root {
+  --bg: #0d0e10; --panel: #15171a; --line: #26292e; --text: #ecebe6; --muted: #9a9890; --dim: #6f6d66;
+  --accent: #ff7a2e; --red: #ff5a52; --amber: #f2b33d; --violet: #b79cff; --green: #5fcf8a; --blue: #7fb0f0;
+  --serif: 'Source Serif 4', Georgia, serif; --font: 'IBM Plex Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme: dark; font-size: clamp(12px, 0.88vw + 0.12vh, 26px);
+}
+:root[data-theme="light"] { --bg: #f2f0ea; --panel: #fbfaf7; --line: #dedad0; --text: #17181b; --muted: #5d5b55; --dim: #85827a; --accent: #c2410c; --red: #c62828; --amber: #a86400; --violet: #6b46c1; --green: #2e7d4f; --blue: #1f63b8; color-scheme: light; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 400 1rem/1.4 var(--font); overflow: hidden; }
+#wall { height: 100vh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 0.9rem; padding: 1rem 1.2rem 0; transition: transform 2s ease; }
+
+/* Header */
+.top { display: flex; align-items: center; gap: 1.4rem; }
+.brand { display: flex; align-items: center; gap: 0.7rem; }
+.brand img { width: 2.4rem; height: 2.4rem; border-radius: 0.5rem; box-shadow: 0 0 0 1px var(--line); }
+.brand b { font: 700 1.55rem/1 var(--serif); letter-spacing: -0.01em; }
+.live { display: inline-flex; align-items: center; gap: 0.4rem; font: 600 0.75rem var(--mono); letter-spacing: 0.14em; color: var(--green); border: 1px solid var(--line); border-radius: 99px; padding: 0.2rem 0.6rem; }
+.live i { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: currentColor; animation: pulse 2s infinite; }
+.live.stale { color: var(--amber); } .live.down { color: var(--red); }
+@keyframes pulse { 50% { opacity: 0.25; } }
+.fresh { font: 500 0.85rem var(--mono); color: var(--muted); }
+.spacer { flex: 1; }
+.clock { text-align: right; }
+.clock .t { font: 600 2.2rem/1 var(--mono); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.clock .d { font: 500 0.85rem var(--mono); color: var(--muted); margin-top: 0.25rem; }
+.ctl { display: flex; gap: 0.4rem; }
+.ctl button { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 0.4rem; font: 500 0.75rem var(--mono); padding: 0.35rem 0.6rem; cursor: pointer; }
+.ctl button:hover { color: var(--text); border-color: var(--muted); }
+body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transition: opacity 0.6s; }
+
+/* Grid of panels */
+.grid { display: grid; min-height: 0; gap: 0.9rem; grid-template-columns: 1.35fr 1fr 1fr; grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "latest spot stats" "latest spot kev" "latest zd rw"; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 0.6rem; padding: 0.9rem 1rem; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.panel h2 { margin: 0 0 0.6rem; font: 600 0.78rem var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 0.5rem; }
+.panel h2 .n { color: var(--text); }
+.panel h2 .right { margin-left: auto; letter-spacing: 0.04em; text-transform: none; color: var(--dim); }
+.p-latest { grid-area: latest; } .p-spot { grid-area: spot; } .p-stats { grid-area: stats; } .p-kev { grid-area: kev; } .p-zd { grid-area: zd; } .p-rw { grid-area: rw; }
+.list { list-style: none; margin: 0; padding: 0; overflow: hidden; flex: 1; min-height: 0; }
+
+/* Latest headlines */
+.news li { display: grid; grid-template-columns: 3.3rem 1fr; gap: 0.15rem 0.7rem; padding: 0.55rem 0; border-top: 1px solid var(--line); }
+.news li:first-child { border-top: 0; padding-top: 0.1rem; }
+.news .age { font: 500 0.82rem var(--mono); color: var(--muted); padding-top: 0.2rem; font-variant-numeric: tabular-nums; }
+.news .src { font: 600 0.72rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.news .t { grid-column: 2; font: 600 1.12rem/1.3 var(--serif); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.news li.new .age { color: var(--accent); }
+.badge { font: 600 0.66rem var(--mono); letter-spacing: 0.06em; padding: 0.08rem 0.4rem; border-radius: 0.25rem; border: 1px solid currentColor; text-transform: uppercase; }
+.b-new { color: var(--accent); } .b-zd { color: var(--red); } .b-breach { color: var(--amber); } .b-rw { color: var(--violet); } .b-kev { color: var(--red); background: color-mix(in srgb, var(--red) 14%, transparent); } .b-n { color: var(--blue); }
+
+/* Spotlight */
+.p-spot .slide { flex: 1; display: flex; flex-direction: column; gap: 0.7rem; min-height: 0; animation: fade 0.8s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(0.4rem); } }
+.p-spot .kicker { font: 600 0.78rem var(--mono); letter-spacing: 0.12em; color: var(--accent); text-transform: uppercase; }
+.p-spot .img { width: 100%; aspect-ratio: 16 / 7; object-fit: cover; border-radius: 0.4rem; background: var(--line); max-height: 34%; }
+.p-spot h3 { margin: 0; font: 700 1.75rem/1.2 var(--serif); letter-spacing: -0.01em; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.p-spot p { margin: 0; color: var(--muted); font-size: 1.02rem; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.p-spot .meta { font: 500 0.8rem var(--mono); color: var(--muted); }
+.p-spot .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.cvechip { font: 600 0.8rem var(--mono); border: 1px solid var(--line); border-radius: 0.3rem; padding: 0.12rem 0.45rem; }
+.cvechip b { margin-left: 0.35rem; }
+.dots { display: flex; gap: 0.35rem; margin-top: auto; padding-top: 0.6rem; }
+.dots i { height: 0.25rem; flex: 1; border-radius: 99px; background: var(--line); overflow: hidden; }
+.dots i.on::after { content: ''; display: block; height: 100%; background: var(--accent); animation: fill var(--rot) linear forwards; }
+@keyframes fill { from { width: 0; } to { width: 100%; } }
+.dev { margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid var(--line); font-size: 0.9rem; color: var(--muted); }
+.dev b { color: var(--text); font-weight: 600; }
+
+/* Stats */
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
+.tile { border: 1px solid var(--line); border-radius: 0.45rem; padding: 0.55rem 0.7rem; }
+.tile .v { font: 600 1.9rem/1 var(--mono); font-variant-numeric: tabular-nums; }
+.tile .k { font: 500 0.72rem var(--mono); color: var(--muted); margin-top: 0.3rem; letter-spacing: 0.04em; }
+.tile.hot .v { color: var(--red); }
+
+/* KEV + zero-days */
+.rows li { padding: 0.5rem 0; border-top: 1px solid var(--line); }
+.rows li:first-child { border-top: 0; padding-top: 0; }
+.rows .l1 { display: flex; align-items: center; gap: 0.5rem; font: 600 0.82rem var(--mono); flex-wrap: wrap; }
+.rows .l1 .when { margin-left: auto; color: var(--muted); font-weight: 500; }
+.rows .l2 { font-size: 0.95rem; margin-top: 0.15rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sev { font: 600 0.72rem var(--mono); padding: 0.05rem 0.35rem; border-radius: 0.25rem; }
+.sev.CRITICAL { background: var(--red); color: #fff; } .sev.HIGH { background: var(--amber); color: #111; } .sev.MEDIUM { background: var(--line); color: var(--text); } .sev.LOW, .sev.NONE { background: var(--line); color: var(--muted); }
+
+/* Ransomware */
+.chart { display: grid; grid-template-columns: repeat(10, 1fr); align-items: end; gap: 0.35rem; height: 5.6rem; margin-bottom: 0.4rem; }
+.chart .c { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 0.2rem; }
+.chart .bar { width: 70%; background: var(--violet); border-radius: 0.25rem 0.25rem 0 0; min-height: 2px; }
+.chart .c.today .bar { background: var(--accent); }
+.chart .val { font: 500 0.68rem var(--mono); color: var(--muted); }
+.chart .day { font: 500 0.66rem var(--mono); color: var(--dim); }
+.claims li { display: flex; align-items: center; gap: 0.55rem; padding: 0.35rem 0; border-top: 1px solid var(--line); font-size: 0.9rem; min-width: 0; }
+.claims li:first-child { border-top: 0; }
+.claims img { width: 1.3rem; height: 0.95rem; object-fit: cover; border-radius: 2px; flex: none; }
+.claims .g { font: 600 0.75rem var(--mono); color: var(--violet); flex: none; min-width: 5.5rem; }
+.claims .v { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.claims .when { font: 500 0.75rem var(--mono); color: var(--muted); flex: none; }
+.note { font: 500 0.68rem var(--mono); color: var(--dim); margin-top: auto; padding-top: 0.4rem; }
+
+/* Ticker */
+.ticker { height: 2.6rem; display: flex; align-items: center; border-top: 1px solid var(--line); overflow: hidden; margin: 0 -1.2rem; padding: 0 1.2rem; gap: 1rem; }
+.ticker .lbl { font: 600 0.75rem var(--mono); letter-spacing: 0.14em; color: var(--accent); flex: none; }
+.ticker .track { overflow: hidden; flex: 1; mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent); }
+.ticker .run { display: inline-flex; gap: 2.5rem; white-space: nowrap; animation: scroll var(--dur, 120s) linear infinite; font-size: 0.95rem; }
+.ticker .run span b { font: 600 0.72rem var(--mono); color: var(--muted); margin-right: 0.5rem; letter-spacing: 0.06em; text-transform: uppercase; }
+@keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+.banner { position: fixed; left: 50%; top: 0.8rem; transform: translateX(-50%); background: var(--red); color: #fff; font: 600 0.85rem var(--mono); padding: 0.4rem 0.9rem; border-radius: 0.4rem; z-index: 5; }
+.empty { color: var(--dim); font-size: 0.9rem; }
+
+/* Narrow or portrait screens: stack the panels and allow scrolling. */
+@media (max-aspect-ratio: 4/3), (max-width: 900px) {
+  body { overflow: auto; } #wall { height: auto; min-height: 100vh; }
+  .grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "stats" "spot" "latest" "kev" "zd" "rw"; }
+  .panel { min-width: 0; } .top { flex-wrap: wrap; gap: 0.6rem 1rem; } .ctl { display: none; } .clock .t { font-size: 1.6rem; }
+  .tiles { grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); } #wall { padding-inline: 1rem; }
+  .panel { max-height: none; } .news .t { -webkit-line-clamp: 3; }
+}
+@media (prefers-reduced-motion: reduce) { .ticker .run, .live i, .p-spot .slide, .dots i.on::after { animation: none; } }
+</style>
+</head>
+<body>
+<div id="wall">
+  <header class="top">
+    <div class="brand"><img src="icon.svg" alt=""><b>Threat Recap</b></div>
+    <span class="live" id="live"><i></i><span id="live-txt">LIVE</span></span>
+    <span class="fresh" id="fresh">Loading…</span>
+    <span class="spacer"></span>
+    <div class="ctl"><button id="b-full" title="Full screen (F)">Full screen</button><button id="b-theme" title="Light / dark (T)">Theme</button><a href="./" style="display:contents"><button>Exit</button></a></div>
+    <div class="clock"><div class="t" id="clock">--:--</div><div class="d" id="date"></div></div>
+  </header>
+  <main class="grid">
+    <section class="panel p-latest"><h2>Latest <span class="right" id="latest-n"></span></h2><ul class="list news" id="latest"></ul></section>
+    <section class="panel p-spot"><h2>Top stories · last 24 h</h2><div id="spot" style="display:flex;flex-direction:column;flex:1;min-height:0"></div></section>
+    <section class="panel p-stats"><h2>Last 24 hours</h2><div class="tiles" id="stats"></div></section>
+    <section class="panel p-kev"><h2>Newly exploited · CISA KEV <span class="right" id="kev-n"></span></h2><ul class="list rows" id="kev"></ul></section>
+    <section class="panel p-zd"><h2>Zero-days &amp; active exploitation · 72 h</h2><ul class="list rows" id="zd"></ul></section>
+    <section class="panel p-rw"><h2>Ransomware claims <span class="right" id="rw-n"></span></h2><div class="chart" id="rw-chart"></div><ul class="list claims" id="rw"></ul><div class="note">Claims posted by criminal groups; unverified.</div></section>
+  </main>
+  <footer class="ticker"><span class="lbl">HEADLINES</span><div class="track"><div class="run" id="ticker"></div></div></footer>
+</div>
+<div class="banner" id="banner" hidden></div>
+<script src="wall.js"></script>
+</body>
+</html>

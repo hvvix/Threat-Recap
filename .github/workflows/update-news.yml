@@ -27,7 +27,8 @@ jobs:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       SITE_URL: ${{ vars.SITE_URL }}
       # Sections switched off on the public site (comma-separated tab ids). Local copies show everything.
-      HIDE_SECTIONS: ${{ vars.HIDE_SECTIONS || 'plugins' }}
+      # "wall" keeps the wall display (wall.html) off the public site while it's being tested.
+      HIDE_SECTIONS: ${{ vars.HIDE_SECTIONS || 'plugins,wall' }}
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
@@ -72,7 +73,9 @@ jobs:
               buttondownUser: process.env.BUTTONDOWN_USER || "",
               goatcounter: process.env.GOATCOUNTER || "",
               hide: (process.env.HIDE_SECTIONS || "").split(",").filter(Boolean)
-            }, null, 2));'
+            }, null, 2));
+            // Hidden pages are not published at all.
+            if ((process.env.HIDE_SECTIONS || "").split(",").includes("wall")) for (const f of ["public/wall.html", "public/wall.js"]) fs.rmSync(f, { force: true });'
           touch public/.nojekyll
         env:
           REPO_URL: ${{ github.server_url }}/${{ github.repository }}

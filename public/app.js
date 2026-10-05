@@ -1233,6 +1233,7 @@ function paletteItems() {
   items.push({ k: 'Action', label: 'Share image of this week', run: shareImage });
   items.push({ k: 'Page', label: 'This week’s digest', run: () => { location.href = 'digest.html'; } });
   items.push({ k: 'Page', label: 'Public data API & RSS feeds', run: () => { location.href = 'api.html'; } });
+  if (!(D.config.hide || []).includes('wall')) items.push({ k: 'Page', label: 'Wall display (for a screen that stays on)', run: () => { location.href = 'wall.html'; } });
   for (const a of D.meta.actors || []) items.push({ k: 'Actor', label: a.n, hint: a.al.join(', '), run: () => { location.href = `actors/${a.sl}.html`; } });
   for (const v of D.meta.vendors || []) items.push({ k: 'Vendor', label: v.n, run: () => { location.href = `vendors/${v.sl}.html`; } });
   for (const g of D.meta.groups || []) items.push({ k: 'Ransomware', label: g.n, hint: `${g.c} claims · 30d`, run: () => { location.href = `groups/${g.sl}.html`; } });
@@ -1869,6 +1870,7 @@ function updateStatus() {
 (async () => {
   try { D.config = await (await fetch('config.json')).json(); } catch {}
   hideSections(D.config.hide);
+  if ((D.config.hide || []).includes('wall')) $('#wall-link')?.remove();
   if (D.config.repoUrl) $('#repo-links').innerHTML = ` · <a href="${url(D.config.repoUrl)}" target="_blank" rel="noopener">Source code</a> · <a href="${url(D.config.repoUrl)}/issues/new" target="_blank" rel="noopener">Report a wrong tag or broken source</a>`;
   if (D.config.buttondownUser) { $('#newsletter').hidden = false; $('#nl-form').action = `https://buttondown.com/api/emails/embed-subscribe/${encodeURIComponent(D.config.buttondownUser)}`; }
   $('#q').value = state.q; $('#q-clear').hidden = !state.q; $('#kbd-slash').hidden = !!state.q;
