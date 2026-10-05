@@ -350,6 +350,7 @@ tr.mine-row td:first-child { box-shadow: inset 3px 0 var(--accent); }
 .cr-rank { font: 600 24px/1 var(--serif); color: var(--muted); padding-top: 2px; }
 .cr-main { min-width: 0; }
 .cr-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.cr-date { font-size: 12.5px; color: var(--muted); font-family: var(--mono); }
 .cr-id { all: unset; cursor: pointer; font: 600 13px var(--mono); color: var(--text); letter-spacing: .02em; }
 .cr-id:hover { color: var(--accent); }
 .cr-badges { display: inline-flex; gap: 6px; flex-wrap: wrap; }

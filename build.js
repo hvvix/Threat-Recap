@@ -585,9 +585,16 @@ async function main() {
   const fixIds = [...new Set([...wanted, ...recent.filter(r => r.sc?.s >= 9).map(r => r.id)])];
   const needFix = fixIds.filter(id => !cveCache[id]?.fxck || (!cveCache[id].fx && now - cveCache[id].fxck > 3 * DAY)).slice(0, Number(process.env.FIX_LOOKUPS || 300));
   await pool(needFix, 8, async id => {
-    try { const r = await lookupCveOrg(id); cveCache[id] = { ...cveCache[id], ...(cveCache[id]?.sc ? { fx: r.fx, fxck: r.fxck, vp: cveCache[id].vp || r.vp, t: cveCache[id].t || r.t, x: cveCache[id].x || r.x } : r), ck: cveCache[id]?.ck || now }; }
+    try { const r = await lookupCveOrg(id); cveCache[id] = { ...cveCache[id], ...(cveCache[id]?.sc ? { fx: r.fx, fxck: r.fxck, vp: cveCache[id].vp || r.vp, t: cveCache[id].t || r.t, x: cveCache[id].x || r.x, pub: cveCache[id].pub || r.pub } : r), ck: cveCache[id]?.ck || now }; }
     catch { cveCache[id] = { ...cveCache[id], fxck: now - 2 * DAY }; }
   });
+  // Published dates for CVEs cached before the date was recorded, a few hundred per run.
+  const needPubDate = wanted.filter(id => cveCache[id] && !cveCache[id].pub && now - (cveCache[id].pubck || 0) > 3 * DAY).slice(0, Number(process.env.PUB_LOOKUPS || 300));
+  await pool(needPubDate, 8, async id => {
+    try { const r = await lookupCveOrg(id); if (r.pub) cveCache[id].pub = r.pub; } catch {}
+    cveCache[id].pubck = now;
+  });
+  if (needPubDate.length) log(`Published dates: looked up ${needPubDate.length}; ${wanted.filter(id => cveCache[id]?.pub).length} of ${wanted.length} known`);
   log(`Fix info: looked up ${needFix.length}; ${fixIds.filter(id => cveCache[id]?.fx).length} of ${fixIds.length} CVEs have fixed versions or advisories`);
   await writeJSON(path.join(CACHE, 'cves.json'), cveCache);
   const pocCache = await readJSON(path.join(CACHE, 'pocs.json'), {});
@@ -599,7 +606,7 @@ async function main() {
   log(`PoC watch: checked ${checked}, ${Object.keys(poc).length} CVEs with public exploits`);
   const epss = await fetchEpss([...new Set([...wanted, ...recent.filter(r => r.sc?.s >= 7).map(r => r.id)])]);
   const info = {};
-  for (const id of wanted) { const c = cveCache[id]; if (c) info[id] = { s: c.sc?.s, v: c.sc?.v, x: c.x, vp: c.vp, t: c.t }; }
+  for (const id of wanted) { const c = cveCache[id]; if (c) info[id] = { s: c.sc?.s, v: c.sc?.v, x: c.x, vp: c.vp, t: c.t, p: c.pub }; }
   const kevIndex = Object.fromEntries(kevList.map(k => [k.id, k.d]));
 
   // 6. Ransomware & supply chain (independent, failures are non-fatal)

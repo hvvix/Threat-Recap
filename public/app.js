@@ -88,6 +88,7 @@ const fmtAgo = t => {
 };
 const fmtFull = t => new Date(t).toLocaleString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 const fmtShort = t => new Date(t).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+const fmtDate = t => new Date(t).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });   // e.g. 3 Oct 2026
 const fmtDay = t => {
   const d = new Date(t), today = new Date(); today.setHours(0, 0, 0, 0);
   const diff = Math.round((today - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / DAY);
@@ -602,7 +603,7 @@ function cveInfo(id) {
   // Title: CISA's vulnerability name, else the CNA's title, else "Vulnerability in <product>".
   const vp = k ? `${k.v} ${k.p}` : (i.vp || '');
   const title = k?.n || i.t || (vp ? `Vulnerability in ${vp}` : '');
-  return { id, s: i.s ?? r.s, v: i.v ?? r.v, x, title, vp, k, kev: C.kevIndex?.[id], e: C.epss?.[id], p: C.poc?.[id], pub: r.p, cwe: r.cwe };
+  return { id, s: i.s ?? r.s, v: i.v ?? r.v, x, title, vp, k, kev: C.kevIndex?.[id], e: C.epss?.[id], p: C.poc?.[id], pub: r.p || i.p, cwe: r.cwe };
 }
 // Short summary: the first one or two sentences of the official description.
 function cveSummary(x, max = 260) {
@@ -627,7 +628,7 @@ function cveRow(id, { rank, why, side = '', mine = false, terms = [] } = {}) {
   return `<article class="cve-row${mine ? ' mine' : ''}">
     ${rank ? `<div class="cr-rank">${rank}</div>` : ''}
     <div class="cr-main">
-      <div class="cr-top"><button class="cr-id" data-cve="${id}">${id}</button><span class="cr-badges">${badges}</span>${epss}</div>
+      <div class="cr-top"><button class="cr-id" data-cve="${id}">${id}</button><span class="cr-badges">${badges}</span>${epss}${c.pub ? `<span class="cr-date" title="Published to the CVE list ${esc(fmtFull(c.pub))}">Published ${esc(fmtDate(c.pub))}</span>` : ''}</div>
       <h3 class="cr-title"><button class="linkish" data-cve="${id}">${highlight(c.title || id, terms)}</button></h3>
       ${c.vp && c.title && !c.title.includes(c.vp.split(' ')[0]) ? `<div class="cr-affects">${esc(c.vp)}</div>` : ''}
       <p class="cr-sum">${highlight(cveSummary(c.x), terms)}</p>
@@ -729,6 +730,7 @@ function openCve(id) {
     ${i.t ? `<p style="margin:6px 0 0;font-weight:600">${esc(i.t)}</p>` : ''}
     <p>${esc(desc || 'No description cached yet — check NVD or CVE.org below.')}</p>
     <dl>
+      <dt>Published</dt><dd>${r.p || i.p ? `${esc(fmtDate(r.p || i.p))} ${Date.now() - (r.p || i.p) < 7 * DAY ? `<span class="muted">(${fmtAgo(r.p || i.p)})</span>` : ''}` : '<span class="muted">Date not available yet</span>'}</dd>
       <dt>CVSS</dt><dd>${s != null ? `<span class="sev ${v}">${s} ${v}</span>` : '<span class="muted">Not scored yet</span>'}</dd>
       <dt>EPSS</dt><dd>${e ? `${(e[0] * 100).toFixed(2)}% chance of exploitation in 30 days <span class="muted">(higher than ${(e[1] * 100).toFixed(1)}% of CVEs)</span>` : '<span class="muted">—</span>'}</dd>
       <dt>CISA KEV</dt><dd>${kd ? `<span class="kev">KEV</span> added ${kd}${k ? ` · federal due date ${k.due}${k.rw ? ' · <strong>used in ransomware campaigns</strong>' : ''}` : ''}` : 'Not in the catalog'}</dd>
