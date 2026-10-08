@@ -110,7 +110,10 @@ const kevList = () => (D.cves.kev || []).filter(k => !stackMode || kevMine(k));
 const hmAll = () => allStories().filter(s => s.s === 'Hackmanac Alerts').sort((a, b) => b.d - a.d);
 const hmAlerts = () => hmAll().filter(s => !/^Hack Tuesday/i.test(s.t));
 function renderStrip() {
-  const ht = hmAll().find(s => /^Hack Tuesday/i.test(s.t));
+  // The Bluesky post is usually merged with Hackmanac's own website report of the same week, so it can
+  // sit among a story's other outlets (r: [source, title, link, date]) rather than be the story itself.
+  const ht = allStories().flatMap(s => [{ t: s.t, u: s.u, d: s.d }, ...s.r.map(r => ({ t: r[1], u: r[2], d: r[3] }))])
+    .filter(x => /^Hack Tuesday \(/.test(x.t)).sort((a, b) => b.d - a.d)[0];
   const m = ht && ht.t.match(/^Hack Tuesday \(([^)]+)\): ([\d,.]+) cyber attacks across (\d+) countries/);
   const all = hmAlerts(), recent = all.filter(s => Date.now() - s.d < 7 * DAY);
   const week = recent.length, day = all.filter(s => Date.now() - s.d < DAY).length;
@@ -123,18 +126,21 @@ function renderStrip() {
 }
 // Alert titles look like "Victim (Country): what happened"; the bold part can also be a whole headline.
 const boldActor = t => esc(t).replace(/^([A-Z][\w.&' -]{1,40}?)( hacking group| ransomware group| ransomware| group)? (claims|claimed)/, '<b>$1$2</b> $3');
+// One line per alert (flag · victim · attacker · age) so a full feed fits; the whole alert is in the tooltip.
 function renderAlerts() {
-  const list = hmAlerts().slice(0, 12);
+  const all = hmAlerts(), list = all.slice(0, 16);
   $('#alerts').innerHTML = list.map(s => {
     const m = s.t.match(/^(.+?) \(([^)]{2,40})\)(?::\s*(.*))?$/);
-    const who = m ? m[1] : s.t, where = m ? m[2] : '', what = m && m[3] ? m[3] : '';
-    const c = alertCountry(s);
-    const flag = c ? `<img src="flags/${c.toLowerCase()}.svg" alt="" title="${esc(where)}" onerror="this.style.visibility='hidden'">` : '<span></span>';
-    return `<li class="${isNew(s) ? 'new' : ''}">${flag}
-      <span class="who">${esc(who)}${where ? `<small>${esc((c && region?.of(c)) || where)}</small>` : ''}</span><span class="when">${isNew(s) ? 'NEW · ' : ''}${ago(s.d)}</span>
-      ${what ? `<span class="what">${boldActor(what)}</span>` : ''}</li>`;
+    const who = m ? m[1] : s.t, where = m ? m[2] : '';
+    const c = alertCountry(s), country = (c && region?.of(c)) || where;
+    const actor = actorOf(s.t);
+    const flag = c ? `<img src="flags/${c.toLowerCase()}.svg" alt="" onerror="this.style.visibility='hidden'">` : '<span></span>';
+    return `<li class="${isNew(s) ? 'new' : ''}" title="${esc(s.t)}${country ? ` · ${esc(country)}` : ''}">${flag}
+      <span class="who">${esc(who)}${actor ? `<small>${esc(actor)}</small>` : country ? `<small>${esc(country)}</small>` : ''}</span><span class="when">${isNew(s) ? 'NEW · ' : ''}${ago(s.d)}</span></li>`;
   }).join('') || '<li class="empty">No alerts yet.</li>';
-  $('#alerts-n').textContent = `${hmAlerts().filter(s => Date.now() - s.d < 7 * DAY).length} this week`;
+  // When Hackmanac last posted, so a quiet panel is clearly quiet at the source, not broken.
+  const week = all.filter(s => Date.now() - s.d < 7 * DAY).length;
+  $('#alerts-n').textContent = `${week} this week${all[0] ? ` · last post ${ago(all[0].d) === 'now' ? 'just now' : ago(all[0].d) + ' ago'}` : ''}`;
 }
 
 function renderLatest() {
@@ -213,7 +219,8 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const monthName = () => new Date().toLocaleDateString([], { month: 'long' });
 // Hackmanac alert titles end the victim with "(Country)".
 const alertCountry = s => { const m = s.t.match(/\(([^)]{2,40})\)/); return m ? countryCode(m[1]) : null; };
-const actorOf = t => (t.match(/^(?:.*?\):\s*)?([A-Z][\w.&' -]{1,40}?)(?: hacking group| ransomware group| ransomware| group)? claim/) || [])[1];
+// "Qilin hacking group claims…", "The Aur0ra cybercrime group claims…", "LockBit 5.0 claims…" → the attacker's name.
+const actorOf = t => { const m = t.match(/^(?:.*?\):\s*)?(?:The\s+)?([A-Z][\w.&' -]{1,40}?)(?: hacking group| cybercrime group| ransomware group| threat group| ransomware| gang| group)? claim/); return m ? m[1] : undefined; };
 const victimOf = t => t.replace(/\s*\([^)]*\).*$/, '');
 const SVG = 'http://www.w3.org/2000/svg';
 const svgEl = (tag, attrs) => { const el = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v); return el; };

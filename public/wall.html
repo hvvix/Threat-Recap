@@ -66,11 +66,11 @@ body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transit
 .strip a { color: inherit; text-decoration: none; } .strip .src { margin-left: auto; font: 500 0.72rem var(--mono); color: var(--dim); }
 
 /* Hackmanac attack alerts */
-.alerts li { display: grid; grid-template-columns: 1.6rem 1fr auto; gap: 0.2rem 0.7rem; align-items: baseline; padding: 0.8rem 0; border-top: 1px solid var(--line); }
+.alerts li { display: grid; grid-template-columns: 1.6rem 1fr auto; gap: 0.2rem 0.7rem; align-items: center; padding: 0.62rem 0; border-top: 1px solid var(--line); }
 .alerts li:first-child { border-top: 0; padding-top: 0; }
 .alerts img { width: 1.5rem; height: 1.1rem; object-fit: cover; border-radius: 2px; align-self: center; }
 .alerts .who { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.alerts .who small { font: 500 0.72rem var(--mono); color: var(--muted); margin-left: 0.4rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.alerts .who small { font: 500 0.78rem var(--font); color: var(--violet); margin-left: 0.55rem; }
 .alerts .when { font: 500 0.78rem var(--mono); color: var(--muted); white-space: nowrap; }
 .alerts li.new .when { color: var(--accent); }
 .alerts .what { grid-column: 2 / 4; font-size: 0.88rem; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
@@ -215,7 +215,7 @@ body.idle .ctl, body.idle { cursor: none; } body.idle .ctl { opacity: 0; transit
   <main class="grid">
     <section class="panel p-latest"><h2>Latest <span class="right" id="latest-n"></span></h2><ul class="list news" id="latest"></ul></section>
     <section class="panel p-spot"><h2>Top stories · last 24 h</h2><div id="spot" style="display:flex;flex-direction:column;flex:1;min-height:0"></div></section>
-    <section class="panel p-alerts"><h2>Cyber attack alerts · Hackmanac <span class="right" id="alerts-n"></span></h2><ul class="list alerts" id="alerts"></ul><div class="note">From Hackmanac's cyber attack alerts (hackmanac.com). Claims by attackers are unverified.</div></section>
+    <section class="panel p-alerts"><h2>Attack alerts · Hackmanac <span class="right" id="alerts-n"></span></h2><ul class="list alerts" id="alerts"></ul><div class="note">From Hackmanac's cyber attack alerts (hackmanac.com). Claims by attackers are unverified.</div></section>
     <section class="panel p-map"><h2>Attacks · last 72 h <span class="right" id="map-n"></span></h2><div class="map" id="map"></div>
       <div class="timeline"><div class="tl-bar"><i id="map-ph"></i></div><span id="map-clock"></span></div>
       <div class="map-top" id="map-top"></div>

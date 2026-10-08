@@ -140,11 +140,11 @@ export function postItems(items, src) {
     if (!keep.test(raw)) return null;
     const flat = s => s.normalize('NFKC').replace(EMOJI, ' ').replace(/\s+/g, ' ').trim();
     // Weekly summary posts ("Hack Tuesday: Week 23 - 29 Sep 2026 ⚠️458 cyber attacks across 74 countries ⚠️ More details: <url>").
-    const weekly = flat(raw).match(/Hack Tuesday:?\s*(Week\s+\d{1,2}\s*[-–]\s*\d{1,2}\s+[A-Za-z]+\s+\d{4})\D{0,10}(\d[\d,.]*)\s+cyber\s?attacks?\s+across\s+(\d+)\s+countries/i);
-    if (weekly) {
-      const more = raw.match(/https?:\/\/(?:www\.)?hackmanac\.com\/\S+/i)?.[0].replace(/[.,)]+$/, '');
-      return { ...it, title: `Hack Tuesday (${weekly[1].replace(/\s*[-–]\s*/, ' – ')}): ${weekly[2]} cyber attacks across ${weekly[3]} countries`, summary: flat(raw), link: more || it.link };
-    }
+    // The week can cross a month: "Week 23 - 29 Sep 2026" or "Week 30 Sep - 06 Oct 2026".
+    const weekly = flat(raw).match(/Hack Tuesday:?\s*(Week\s+\d{1,2}(?:\s+[A-Za-z]+)?\s*[-–]\s*\d{1,2}\s+[A-Za-z]+\s+\d{4})\D{0,10}(\d[\d,.]*)\s+cyber\s?attacks?\s+across\s+(\d+)\s+countries/i);
+    // Keep the post's own link: the website report has the same URL as the item in Hackmanac's site feed,
+    // which would replace this one (and its numbers) when the two are merged.
+    if (weekly) return { ...it, title: `Hack Tuesday (${weekly[1].replace(/\s*[-–]\s*/, ' – ')}): ${weekly[2]} cyber attacks across ${weekly[3]} countries`, summary: flat(raw) };
     const body = flat(raw).replace(new RegExp(`^(?:${src.posts})\\W*`, 'i'), '');
     const fancy = raw.match(FANCY_RUN);
     const name = fancy ? flat(fancy[0]).replace(/[\s,(-]+$/, '').replace(/(\w{2,})\.$/, '$1') : '';
