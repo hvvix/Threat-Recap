@@ -163,19 +163,32 @@ export function postItems(items, src) {
   }).filter(Boolean);
 }
 
-async function fetchFeed(src) {
+async function fetchFeedUrl(url, src) {
   let lastErr = '';
   for (const ua of [BOT_UA, BROWSER_UA]) {
     try {
-      const { r, buf } = await fetchRaw(src.feed, { ua, accept: 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5' });
+      const { r, buf } = await fetchRaw(url, { ua, accept: 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5' });
       if (!r.ok) { lastErr = `HTTP ${r.status}`; continue; }
-      let items = parseFeed(decodeBody(buf, r.headers.get('content-type')));
+      const body = decodeBody(buf, r.headers.get('content-type'));
+      let items = parseFeed(body);
       if (src.posts && items.length) { items = postItems(items, src); if (!items.length) return { items }; }
       if (items.length) return { items };
-      lastErr = 'no items (not a feed?)';
+      // Cloudflare and similar bot checks answer data-centre requests (like GitHub's) with a challenge page.
+      lastErr = /Just a moment|cf-chl|challenge-platform|Attention Required/i.test(body) ? 'blocked by bot protection' : 'no items (not a feed?)';
     } catch (e) { lastErr = e.cause?.code || e.name || String(e); }
   }
   return { items: [], error: lastErr };
+}
+
+// Sources with "fallback": {"name": "...", "feed": "..."} switch to that feed when their own fails
+// (e.g. sites that block GitHub's servers). Google News appends " - Publisher" to headlines; that's removed.
+export async function fetchFeed(src) {
+  const main = await fetchFeedUrl(src.feed, src);
+  if (!main.error || !src.fallback?.feed) return main;
+  const alt = await fetchFeedUrl(src.fallback.feed, src);
+  if (alt.error) return { items: [], error: `${main.error}; ${src.fallback.name || 'fallback'} also failed (${alt.error})` };
+  const suffix = new RegExp(`\\s+[-–|]\\s+${(src.fallback.strip || src.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i');
+  return { items: alt.items.map(i => ({ ...i, title: i.title.replace(suffix, ''), summary: i.summary && /^<|^\s*$/.test(i.summary) ? '' : (i.summary || '').replace(suffix, '') })), via: src.fallback.name, mainError: main.error };
 }
 
 // ---------- normalisation & tagging ----------
@@ -527,10 +540,10 @@ async function main() {
   log(`Fetching ${feeds.length} feeds…`);
   const status = [];
   const results = await pool(feeds, 12, async src => {
-    const { items, error } = await fetchFeed(src);
+    const { items, error, via, mainError } = await fetchFeed(src);
     let kept = items.filter(i => !NOISE.test(i.title) && (!src.filter || RELEVANCE.test(`${i.title} ${i.summary}`)));
     kept = kept.slice(0, src.bulk ? 60 : 80);
-    status.push({ n: src.name, ok: !error, count: items.length, latest: Math.max(0, ...items.map(i => i.date || 0)) || null, err: error || undefined });
+    status.push({ n: src.name, ok: !error, count: items.length, latest: Math.max(0, ...items.map(i => i.date || 0)) || null, err: error || undefined, fb: via ? `${via} (own feed: ${mainError})` : undefined });
     return kept.map(i => ({ ...i, src }));
   });
   const failed = status.filter(s => !s.ok);
@@ -746,7 +759,7 @@ async function main() {
   if (ransomware) { try { await syncFlags(new Set([...(ransomware.totals?.countriesYtd || []).map(c => c[0]), ...ransomware.recent.map(v => v.c)])); } catch (e) { log('Flags failed:', e.message); } }
   let icons = {};
   try { icons = await syncIcons(sources); log(`Site icons: ${Object.keys(icons).length}`); } catch (e) { log('Icons failed:', e.message); }
-  await writeJSON(path.join(OUT, 'sources.json'), { generated, sources: sources.map(s => ({ n: s.name, c: s.cat, site: s.site, feed: s.feed || null, ic: icons[s.name], via: s.via, ...(st[s.name] ? { ok: st[s.name].ok, count: st[s.name].count, latest: st[s.name].latest, err: st[s.name].err } : {}) })) });
+  await writeJSON(path.join(OUT, 'sources.json'), { generated, sources: sources.map(s => ({ n: s.name, c: s.cat, site: s.site, feed: s.feed || null, ic: icons[s.name], via: s.via, ...(st[s.name] ? { ok: st[s.name].ok, count: st[s.name].count, latest: st[s.name].latest, err: st[s.name].err, fb: st[s.name].fb } : {}) })) });
   try { const t = await writeArchive({ root: ROOT, items, recent, kevList, ransomwareYear: ransomware?.year, hibpAll, sources, clip }); log(`Archive: ${t.news} news items, ${t.cves} CVEs, ${t.rw} ransomware claims, ${t.kev} KEV, ${t.hibp} HIBP this year`); } catch (e) { log('Archive failed:', e.message); }
   await writeDigestPage({ stories: stories.filter(s => !s.so), kevList, info, epss, ransomware }); // after the archive: the monthly recap reads it
   const pages = await writeSite({ root: ROOT, stories, kevList, info, ransomware, incidents, siteUrl: process.env.SITE_URL || '' });
