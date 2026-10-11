@@ -182,13 +182,23 @@ async function fetchFeedUrl(url, src) {
 
 // Sources with "fallback": {"name": "...", "feed": "..."} switch to that feed when their own fails
 // (e.g. sites that block GitHub's servers). Google News appends " - Publisher" to headlines; that's removed.
+// Sources on their own domain (site path "/") get a Google News fallback automatically; blogs inside a
+// bigger site (microsoft.com/security/blog) don't, because a whole-domain search would pull unrelated news.
+const googleNews = host => `https://news.google.com/rss/search?q=site%3A${encodeURIComponent(host)}&hl=en-US&gl=US&ceid=US:en`;
+function fallbackFor(src) {
+  if (src.fallback) return src.fallback;
+  if (src.via || src.posts) return null;                       // relayed or social feeds have no site of their own to search
+  try { const u = new URL(src.site); return u.pathname === '/' || u.pathname === '' ? { name: 'Google News', feed: googleNews(u.hostname.replace(/^www\./, '')) } : null; } catch { return null; }
+}
 export async function fetchFeed(src) {
   const main = await fetchFeedUrl(src.feed, src);
-  if (!main.error || !src.fallback?.feed) return main;
-  const alt = await fetchFeedUrl(src.fallback.feed, src);
-  if (alt.error) return { items: [], error: `${main.error}; ${src.fallback.name || 'fallback'} also failed (${alt.error})` };
-  const suffix = new RegExp(`\\s+[-–|]\\s+${(src.fallback.strip || src.name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i');
-  return { items: alt.items.map(i => ({ ...i, title: i.title.replace(suffix, ''), summary: i.summary && /^<|^\s*$/.test(i.summary) ? '' : (i.summary || '').replace(suffix, '') })), via: src.fallback.name, mainError: main.error };
+  const fb = main.error ? fallbackFor(src) : null;
+  if (!fb?.feed) return main;
+  const alt = await fetchFeedUrl(fb.feed, src);
+  if (alt.error) return { items: [], error: `${main.error}; ${fb.name || 'fallback'} also failed (${alt.error})` };
+  // Google News ends every headline with " - Publisher": the given name, or else any short last segment.
+  const suffix = fb.strip ? new RegExp(`\\s+[-–|]\\s+${fb.strip.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i') : /\s+[-–|]\s+[^-–|]{2,40}$/;
+  return { items: alt.items.map(i => ({ ...i, title: i.title.replace(suffix, ''), summary: i.summary && /^<|^\s*$/.test(i.summary) ? '' : (i.summary || '').replace(suffix, '') })), via: fb.name, mainError: main.error };
 }
 
 // ---------- normalisation & tagging ----------
