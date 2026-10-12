@@ -19,7 +19,7 @@ To build once without the server, run `node build.js`; the output goes to `publi
 2. Go to **Settings → Pages** and under *Build and deployment* choose **Source: GitHub Actions**.
 3. Go to **Actions → update-news → Run workflow**. After about 2 minutes the site is live at `https://<user>.github.io/<repo>/`.
 
-The workflow has its own schedule, but GitHub runs scheduled workflows on a best-effort basis: on a new repository they were often hours late or skipped. For reliable updates, use a free external timer such as [cron-job.org](https://cron-job.org) to start the workflow (the live site uses one, every 30 minutes):
+The workflow has its own schedule, but GitHub runs scheduled workflows on a best-effort basis: on a new repository they were often hours late or skipped. For reliable updates, use a free external timer such as [cron-job.org](https://cron-job.org) to start the workflow (the live site uses one, every 4 hours):
 
 1. Create a fine-grained token at <https://github.com/settings/personal-access-tokens/new>: *Only select repositories* → this repository; *Repository permissions* → **Actions: Read and write**; nothing else.
 2. Create a cron job that sends a `POST` to `https://api.github.com/repos/<user>/<repo>/actions/workflows/update-news.yml/dispatches` with the headers `Authorization: Bearer <token>`, `Accept: application/vnd.github+json` and `Content-Type: application/json`, and the body `{"ref":"main"}`. A test run should return **204 No Content**.

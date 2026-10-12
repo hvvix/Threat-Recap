@@ -7,7 +7,8 @@ const $ = s => document.querySelector(s);
 const MIN = 6e4, HOUR = 36e5, DAY = 864e5;
 const params = new URLSearchParams(location.search);
 const ROTATE = Math.max(6, Number(params.get('rotate')) || 15) * 1000;
-const REFRESH = 5 * MIN;          // data files change about every 30 minutes
+const REFRESH = 5 * MIN;          // check often; the data itself changes every few hours
+const STALE = 5 * HOUR;           // updates run about every 4 hours; older than this means something is wrong
 const RELOAD = 6 * HOUR;          // pick up new versions of the page itself
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const ago = t => { const m = Math.max(0, Math.round((Date.now() - t) / MIN)); return m < 1 ? 'now' : m < 60 ? `${m}m` : m < 1440 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`; };
@@ -40,8 +41,8 @@ function tick() {
 function freshness() {
   if (!generated) return;
   const age = Date.now() - generated, offline = Date.now() - lastOk > 15 * MIN;
-  $('#live').className = 'live' + (offline ? ' down' : age > 90 * MIN ? ' stale' : '');
-  $('#live-txt').textContent = offline ? 'OFFLINE' : age > 90 * MIN ? 'DELAYED' : 'LIVE';
+  $('#live').className = 'live' + (offline ? ' down' : age > STALE ? ' stale' : '');
+  $('#live-txt').textContent = offline ? 'OFFLINE' : age > STALE ? 'DELAYED' : 'LIVE';
   $('#live').title = `News data updated ${ago(generated) === 'now' ? 'just now' : ago(generated) + ' ago'}`;
   $('#fresh').innerHTML = stackMode ? `<span class="stackbar" title="${esc([...stack.vendors, ...stack.keywords].join(', '))}">My stack${hasStack ? '' : ' (none set)'}</span>` : '';
   const b = $('#banner');
