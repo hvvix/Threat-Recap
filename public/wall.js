@@ -221,7 +221,8 @@ const monthName = () => new Date().toLocaleDateString([], { month: 'long' });
 // Hackmanac alert titles end the victim with "(Country)".
 const alertCountry = s => { const m = s.t.match(/\(([^)]{2,40})\)/); return m ? countryCode(m[1]) : null; };
 // "Qilin hacking group claims…", "The Aur0ra cybercrime group claims…", "LockBit 5.0 claims…" → the attacker's name.
-const actorOf = t => { const m = t.match(/^(?:.*?\):\s*)?(?:The\s+)?([A-Z][\w.&' -]{1,40}?)(?: hacking group| cybercrime group| ransomware group| threat group| ransomware| gang| group)? claim/); return m ? m[1] : undefined; };
+// Names can start lowercase ("The n0n hacking group claims…").
+const actorOf = t => { const m = t.match(/^(?:.*?\):\s*)?(?:The\s+)?([A-Za-z0-9][\w.&' -]{1,40}?)(?: hacking group| cybercrime group| cybercriminal group| criminal group| ransomware group| extortion group| threat group| ransomware| gang| group)? claim/); return m ? m[1] : undefined; };
 const victimOf = t => t.replace(/\s*\([^)]*\).*$/, '');
 const SVG = 'http://www.w3.org/2000/svg';
 const svgEl = (tag, attrs) => { const el = document.createElementNS(SVG, tag); for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v); return el; };
