@@ -127,21 +127,42 @@ function renderStrip() {
 }
 // Alert titles look like "Victim (Country): what happened"; the bold part can also be a whole headline.
 const boldActor = t => esc(t).replace(/^([A-Z][\w.&' -]{1,40}?)( hacking group| ransomware group| ransomware| group)? (claims|claimed)/, '<b>$1$2</b> $3');
-// One line per alert (flag · victim · attacker · age) so a full feed fits; the whole alert is in the tooltip.
+// Live attack feed: ransomware leak-site claims (many a day), Hackmanac alerts and breach reports from the
+// news, merged newest first, so the panel keeps moving even when one source is quiet.
+const fmtRecords = n => n >= 1e9 ? `${+(n / 1e9).toFixed(1)}B` : n >= 1e6 ? `${+(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(n);
+function attackFeed() {
+  const since = Date.now() - 3 * DAY, out = [];
+  for (const v of D.rw?.recent || []) if (v.d > since) out.push({ k: 'claim', d: v.d, c: v.c, who: v.t.replace(/^www\./i, ''), by: v.g, tip: `${v.g} claims ${v.t}${v.a ? ` · ${v.a}` : ''}` });
+  for (const s of hmAlerts()) {
+    if (s.d < since) continue;
+    const m = s.t.match(/^(.+?) \(([^)]{2,40})\)/);
+    out.push({ k: 'alert', d: s.d, c: alertCountry(s), who: m ? m[1] : s.t, by: actorOf(s.t) || '', tip: s.t });
+  }
+  // Breach reports: one per incident (same record count = same breach), Hackmanac's own already listed above.
+  const seen = new Set();
+  for (const s of allStories().filter(s => s.tg.includes('breach') && s.s !== 'Hackmanac Alerts' && s.d > since).sort((a, b) => (b.rc || 0) - (a.rc || 0) || b.r.length - a.r.length)) {
+    const key = s.rc ? `${s.rc}|${s.ru}` : s.t.toLowerCase().split(/\W+/).slice(0, 4).join(' ');
+    if (seen.has(key)) continue; seen.add(key);
+    out.push({ k: 'breach', d: s.d, c: null, who: s.t, by: '', rec: s.rc ? fmtRecords(s.rc) : '', tip: `${s.t} — ${s.s}${s.rc ? ` · ${s.rc.toLocaleString()} ${s.ru || 'records'}` : ''}` });
+  }
+  return out.sort((a, b) => b.d - a.d);
+}
+const FEED_TAG = { claim: 'Claim', alert: 'Alert', breach: 'Breach' };
 function renderAlerts() {
-  const all = hmAlerts(), list = all.slice(0, 16);
-  $('#alerts').innerHTML = list.map(s => {
-    const m = s.t.match(/^(.+?) \(([^)]{2,40})\)(?::\s*(.*))?$/);
-    const who = m ? m[1] : s.t, where = m ? m[2] : '';
-    const c = alertCountry(s), country = (c && region?.of(c)) || where;
-    const actor = actorOf(s.t);
-    const flag = c ? `<img src="flags/${c.toLowerCase()}.svg" alt="" onerror="this.style.visibility='hidden'">` : '<span></span>';
-    return `<li class="${isNew(s) ? 'new' : ''}" title="${esc(s.t)}${country ? ` · ${esc(country)}` : ''}">${flag}
-      <span class="who">${esc(who)}${actor ? `<small>${esc(actor)}</small>` : country ? `<small>${esc(country)}</small>` : ''}</span><span class="when">${isNew(s) ? 'NEW · ' : ''}${ago(s.d)}</span></li>`;
-  }).join('') || '<li class="empty">No alerts yet.</li>';
-  // When Hackmanac last posted, so a quiet panel is clearly quiet at the source, not broken.
-  const week = all.filter(s => Date.now() - s.d < 7 * DAY).length;
-  $('#alerts-n').textContent = `${week} this week${all[0] ? ` · last post ${ago(all[0].d) === 'now' ? 'just now' : ago(all[0].d) + ' ago'}` : ''}`;
+  // Claims arrive many times an hour and would push everything else out, so at most 4 are shown;
+  // the list stays in time order and the header still counts them all.
+  const all = attackFeed();
+  let claims = 0;
+  const list = all.filter(e => e.k !== 'claim' || ++claims <= 4).slice(0, 18);
+  $('#alerts').innerHTML = list.map(e => {
+    const flag = e.c ? `<img src="flags/${esc(e.c.toLowerCase())}.svg" alt="" onerror="this.style.visibility='hidden'">` : '<span class="nf"></span>';
+    const fresh = Date.now() - e.d < 45 * MIN;
+    return `<li class="${fresh ? 'new' : ''}" title="${esc(e.tip)}${e.c ? ` · ${esc(region?.of(e.c) || e.c)}` : ''}">${flag}
+      <span class="who">${esc(e.who)}${e.by ? `<small class="${e.k}">${esc(e.by)}</small>` : ''}</span><span class="tag ${e.k}">${FEED_TAG[e.k]}${e.rec ? ` · ${esc(e.rec)}` : ''}</span><span class="when">${fresh ? 'NEW · ' : ''}${ago(e.d)}</span></li>`;
+  }).join('') || '<li class="empty">No attacks reported in the last 72 hours.</li>';
+  const day = all.filter(e => Date.now() - e.d < DAY);
+  const n = k => day.filter(e => e.k === k).length;
+  $('#alerts-n').textContent = `${day.length} in 24 h · ${n('claim')} claims · ${n('alert')} alerts · ${n('breach')} breaches`;
 }
 
 function renderLatest() {
