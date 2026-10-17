@@ -1183,7 +1183,10 @@ function openSettings() {
     <label><input type="checkbox" name="n" value="kev" ${settings.notify.kev ? 'checked' : ''}> New CISA KEV entries</label>
     <label><input type="checkbox" name="n" value="stack" ${settings.notify.stack ? 'checked' : ''}> Stories about my stack</label>
     <label><input type="checkbox" name="n" value="saved" ${settings.notify.saved ? 'checked' : ''}> Updates to saved stories</label>
-  </div><button class="save" id="n-test">Send a test notification</button>`}
+  </div>${pushAvailable() ? `
+  <label class="toggle" style="margin-top:10px"><input type="checkbox" id="n-push" ${settings.notify.push ? 'checked' : ''}> Also when the app is closed (push alerts)</label>
+  <p class="desc">${isIPhone() && !installed() ? '<strong>On iPhone, install Threat Recap to your home screen first</strong> (Share → Add to Home Screen), then turn this on from the installed app. ' : ''}Zero-days, newly exploited CVEs and stories about your stack are pushed to this device after each update (several times a day). Your stack's vendor names are stored with the push address so the right alerts reach you; nothing else is.</p>` : ''}
+  <button class="save" id="n-test">Send a test notification</button>`}
   ${mutedPanel()}
   <h3>Headline language</h3>
   <label class="field">Translate headlines into<select id="lang">${langs.map(([c, l]) => `<option value="${c}" ${settings.lang === c ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
@@ -1203,8 +1206,32 @@ async function applySettingsFromDrawer() {
   if (wantOn && Notification.permission !== 'granted') { const p = await Notification.requestPermission(); settings.notify.on = p === 'granted'; }
   else settings.notify.on = !!wantOn;
   if (settings.notify.on) registerPeriodicSync();
+  // Push alerts: (re)subscribe with the chosen topics and vendors, or remove this device.
+  const wantPush = !!$('#n-push', dr)?.checked && settings.notify.on;
+  let pushMsg = '';
+  if (wantPush) { try { await pushSubscribe(); settings.notify.push = true; pushMsg = ' · push alerts on'; } catch (e) { settings.notify.push = false; pushMsg = ` · push alerts failed: ${e.message}`; } }
+  else if (settings.notify.push) { await pushUnsubscribe().catch(() => {}); settings.notify.push = false; pushMsg = ' · push alerts off'; }
   settings.lang = $('#lang', dr)?.value || '';
-  saveSettings(); closeDrawer(); render(); toast('Settings saved');
+  saveSettings(); closeDrawer(); render(); toast('Settings saved' + pushMsg);
+}
+
+// ----- Push alerts (Web Push through the push Worker; see push/worker.js and push.js) -----
+const isIPhone = () => /iPhone|iPad|iPod/.test(navigator.userAgent);
+const pushAvailable = () => !!(D.config.pushApi && D.config.vapidPublic && 'PushManager' in window && 'serviceWorker' in navigator && 'Notification' in window);
+const b64ToBytes = s => { const b = atob((s + '='.repeat((4 - s.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); };
+async function pushSubscribe() {
+  if (Notification.permission !== 'granted' && await Notification.requestPermission() !== 'granted') throw new Error('notifications are blocked');
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(D.config.vapidPublic) });
+  const topics = ['zeroday', 'kev', 'stack'].filter(t => settings.notify[t]);
+  const r = await fetch(`${D.config.pushApi}/subscribe`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), topics, vendors: settings.stack.vendors }) });
+  if (!r.ok) throw new Error(`server said ${r.status}`);
+}
+async function pushUnsubscribe() {
+  const reg = await navigator.serviceWorker.getRegistration(); const sub = await reg?.pushManager.getSubscription();
+  if (!sub) return;
+  await fetch(`${D.config.pushApi}/unsubscribe`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON() }) }).catch(() => {});
+  await sub.unsubscribe();
 }
 
 // ----- Notifications -----
@@ -1218,9 +1245,11 @@ function notifyChanges(oldNews, oldCves) {
   const known = new Set(oldNews.stories.map(s => s.id));
   const fresh = D.news.stories.filter(s => !known.has(s.id) && !s.b && !s.so);
   const out = [];
-  if (settings.notify.zeroday) for (const s of fresh.filter(s => s.tg.includes('zeroday')).slice(0, 2)) out.push(['Zero-day: ' + s.s, s.t, s.u]);
-  if (settings.notify.kev) { const old = new Set((oldCves.kev || []).map(k => k.id)); const n = (D.cves.kev || []).filter(k => !old.has(k.id)); if (n.length) out.push([`${n.length} new actively exploited CVE${n.length > 1 ? 's' : ''} (CISA KEV)`, n.slice(0, 3).map(k => `${k.id} ${k.v} ${k.p}`).join('\n'), `./?tab=cves#${n[0].id}`]); }
-  if (settings.notify.stack) for (const s of fresh.filter(isMine).slice(0, 2)) out.push(['Your stack: ' + s.ve.concat(s.s).slice(0, 2).join(' · '), s.t, s.u]);
+  // With push alerts on, zero-days, KEV and stack alerts arrive by push; don't repeat them from the open page.
+  const viaPush = !!settings.notify.push;
+  if (settings.notify.zeroday && !viaPush) for (const s of fresh.filter(s => s.tg.includes('zeroday')).slice(0, 2)) out.push(['Zero-day: ' + s.s, s.t, s.u]);
+  if (settings.notify.kev && !viaPush) { const old = new Set((oldCves.kev || []).map(k => k.id)); const n = (D.cves.kev || []).filter(k => !old.has(k.id)); if (n.length) out.push([`${n.length} new actively exploited CVE${n.length > 1 ? 's' : ''} (CISA KEV)`, n.slice(0, 3).map(k => `${k.id} ${k.v} ${k.p}`).join('\n'), `./?tab=cves#${n[0].id}`]); }
+  if (settings.notify.stack && !viaPush) for (const s of fresh.filter(isMine).slice(0, 2)) out.push(['Your stack: ' + s.ve.concat(s.s).slice(0, 2).join(' · '), s.t, s.u]);
   if (settings.notify.saved) { const u = D.news.stories.filter(s => updatesFor(s) && !updatesFor(oldNews.stories.find(o => o.id === s.id) || s)); for (const s of u.slice(0, 1)) out.push(['Saved story updated', s.t, './?tab=saved']); }
   out.slice(0, 4).forEach(([t, b, u]) => notify(t, b, u));
 }

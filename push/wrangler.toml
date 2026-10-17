@@ -1,0 +1,16 @@
+# Cloudflare Worker that stores push subscriptions. Deploy from this folder:
+#   npx wrangler login
+#   npx wrangler kv namespace create SUBS        (paste the id it prints below)
+#   npx wrangler secret put ADMIN_TOKEN          (a long random string; also a GitHub secret PUSH_ADMIN_TOKEN)
+#   npx wrangler deploy
+name = "threat-recap-push"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+# Sites allowed to subscribe (comma-separated). Add your own domain here if you get one.
+ALLOWED_ORIGINS = "https://hvvix.github.io,http://localhost:3000"
+
+[[kv_namespaces]]
+binding = "SUBS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"

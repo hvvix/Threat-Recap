@@ -57,6 +57,20 @@ jobs:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Push alerts to subscribed devices (see push.js and push/worker.js). Skipped until PUSH_API is set.
+      # Runs before the cache is saved because it remembers what it already sent in cache/push-state.json.
+      - name: Send push alerts
+        if: vars.PUSH_API != ''
+        continue-on-error: true
+        run: |
+          npm install --no-save --no-audit --no-fund --no-package-lock web-push@3
+          node push.js
+        env:
+          PUSH_API: ${{ vars.PUSH_API }}
+          VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
+          PUSH_ADMIN_TOKEN: ${{ secrets.PUSH_ADMIN_TOKEN }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+
       - uses: actions/cache/save@v4
         if: always()
         with:
@@ -72,6 +86,8 @@ jobs:
               siteUrl: process.env.SITE_URL || "",
               buttondownUser: process.env.BUTTONDOWN_USER || "",
               goatcounter: process.env.GOATCOUNTER || "",
+              pushApi: process.env.PUSH_API || "",
+              vapidPublic: process.env.VAPID_PUBLIC_KEY || "",
               hide: (process.env.HIDE_SECTIONS || "").split(",").filter(Boolean)
             }, null, 2));
             // Hidden pages are not published at all.
@@ -81,6 +97,8 @@ jobs:
           REPO_URL: ${{ github.server_url }}/${{ github.repository }}
           BUTTONDOWN_USER: ${{ vars.BUTTONDOWN_USER }}
           GOATCOUNTER: ${{ vars.GOATCOUNTER }}
+          PUSH_API: ${{ vars.PUSH_API }}
+          VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
 
       - uses: actions/configure-pages@v5
 
