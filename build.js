@@ -706,6 +706,18 @@ async function main() {
     generated, kev: kevRecent, kevIndex, info, epss, poc, fix, ai: cveAi,
     recent: recent.sort((a, b) => b.p - a.p).slice(0, 1500).map(r => ({ id: r.id, p: r.p, x: r.x, s: r.sc?.s, v: r.sc?.v, cwe: r.cwe })),
   });
+  // Smaller files for a fast first load (the site fetches these first and the rest in the background;
+  // news.json and cves.json stay complete for the public API). version.json lets open pages check for
+  // an update without downloading everything.
+  const weekAgo = generated - 7 * DAY;
+  await writeJSON(path.join(OUT, 'news-7d.json'), { generated, stories: stories.filter(s => s.d >= weekAgo) });
+  await writeJSON(path.join(OUT, 'news-old.json'), { generated, stories: stories.filter(s => s.d < weekAgo) });
+  await writeJSON(path.join(OUT, 'cves-core.json'), {
+    generated, kev: kevRecent, kevIndex, epss,
+    sev: Object.fromEntries(Object.entries(info).filter(([, i]) => i.s != null).map(([id, i]) => [id, [i.s, i.v]])),
+    pocIds: Object.keys(poc).filter(id => poc[id].n || poc[id].edb),
+  });
+  await writeJSON(path.join(OUT, 'version.json'), { generated });
   if (ransomware) { const { all30, year, ...rw } = ransomware; await writeJSON(path.join(OUT, 'ransomware.json'), rw); }
   await writeJSON(path.join(OUT, 'iocs.json'), { generated, iocs: iocOut });
   // Landmark vulnerabilities with live data; a CVE that CVE.org doesn't know is reported, not shown.

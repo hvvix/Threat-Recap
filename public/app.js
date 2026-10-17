@@ -103,11 +103,43 @@ async function getJSON(name, fresh) {
   if (!r.ok) throw new Error(`${name}: HTTP ${r.status}`);
   return r.json();
 }
+// Two stages, so the page appears quickly on phones and slow connections: first the last 7 days of news
+// and the core CVE data (~25% of the full size), then everything else in the background (D.rest).
+// Views that need the full data wait for D.rest; D.partial is true until it arrives.
+const emptyCves = () => ({ kev: [], kevIndex: {}, info: {}, epss: {}, recent: [], poc: {} });
 async function loadAll(fresh = false) {
+  const get = n => getJSON(n, fresh);
+  const [news, core, rw, sources, meta] = await Promise.allSettled(['news-7d.json', 'cves-core.json', 'ransomware.json', 'sources.json', 'meta.json'].map(get));
+  if (news.status !== 'fulfilled') return loadEverything(fresh);      // older build without the split files
+  D.news = news.value;
+  // The core CVE file has severity and exploit flags only; enough for story cards and chips.
+  const c = core.value;
+  D.cves = c ? { ...emptyCves(), kev: c.kev, kevIndex: c.kevIndex, epss: c.epss,
+    info: Object.fromEntries(Object.entries(c.sev || {}).map(([id, [s, v]]) => [id, { s, v }])),
+    poc: Object.fromEntries((c.pocIds || []).map(id => [id, { n: 1 }])) } : emptyCves();
+  D.rw = rw.value || null;
+  D.sources = sources.value || { sources: [] };
+  D.meta = meta.value || { vendors: [], actors: [], groups: [], malware: [] };
+  D.supply ||= { advisories: [] }; D.breaches ||= { hibp: [] }; D.incidents ||= { incidents: [] };
+  if (fresh) D.iocs = null;
+  D.partial = true;
+  index();
+  D.rest = (async () => {
+    const [old, cves, supply, breaches, incidents] = await Promise.allSettled(['news-old.json', 'cves.json', 'supply.json', 'breaches.json', 'incidents.json'].map(get));
+    if (old.status === 'fulfilled') D.news = { generated: D.news.generated, stories: [...D.news.stories, ...old.value.stories] };
+    if (cves.status === 'fulfilled') { D.cves = cves.value; D.cves.poc ||= {}; }
+    D.supply = supply.value || D.supply; D.breaches = breaches.value || D.breaches; D.incidents = incidents.value || D.incidents;
+    D.partial = false;
+    index();
+  })();
+  D.rest.catch(() => {});
+}
+// Fallback: everything in one go (used if the split files aren't there).
+async function loadEverything(fresh = false) {
   const [news, cves, rw, supply, sources, breaches, meta, incidents] = await Promise.allSettled(['news.json', 'cves.json', 'ransomware.json', 'supply.json', 'sources.json', 'breaches.json', 'meta.json', 'incidents.json'].map(n => getJSON(n, fresh)));
   if (news.status !== 'fulfilled') throw news.reason;
   D.news = news.value;
-  D.cves = cves.value || { kev: [], kevIndex: {}, info: {}, epss: {}, recent: [], poc: {} };
+  D.cves = cves.value || emptyCves();
   D.cves.poc ||= {};
   D.rw = rw.value || null;
   D.supply = supply.value || { advisories: [] };
@@ -116,6 +148,7 @@ async function loadAll(fresh = false) {
   D.meta = meta.value || { vendors: [], actors: [], groups: [], malware: [] };
   D.incidents = incidents.value || { incidents: [] };
   if (fresh) D.iocs = null;
+  D.partial = false; D.rest = Promise.resolve();
   index();
 }
 // Large/rarely needed files load on demand.
@@ -716,6 +749,7 @@ function patchFirst() {
 // ----- CVE drawer -----
 function openCve(id) {
   id = id.toUpperCase();
+  if (D.partial) { D.rest.then(() => openCve(id)); return; }      // details (description, fix, exploits) are in the full file
   setTimeout(() => fillCvePlugins(id), 0);
   if (location.hash !== `#${id}`) history.replaceState(null, '', `${location.pathname}${location.search}#${id}`);
   const i = D.cves.info?.[id] || {}, r = recentById.get(id) || {};
@@ -1134,7 +1168,9 @@ function openSettings() {
   const vendors = (D.meta.vendors || []).map(v => v.n);
   const langs = [['', 'Original (English)'], ['es', 'Español'], ['fr', 'Français'], ['de', 'Deutsch'], ['pt', 'Português'], ['it', 'Italiano'], ['nl', 'Nederlands'], ['ar', 'العربية'], ['tr', 'Türkçe'], ['ru', 'Русский'], ['uk', 'Українська'], ['hi', 'हिन्दी'], ['ja', '日本語'], ['ko', '한국어'], ['zh', '中文']];
   const notifState = !('Notification' in window) ? 'unsupported' : Notification.permission;
+  const theme = document.documentElement.dataset.theme || 'system';
   openDrawer(`<h2 id="dr-title" style="font-family:var(--font);font-size:20px">Settings</h2><p class="muted">Stored in this browser only. Nothing is sent anywhere.</p>
+  <h3>Appearance</h3><div class="theme-switch theme-words" role="group" aria-label="Theme">${[['light', 'Light'], ['system', 'Auto'], ['dark', 'Dark']].map(([v, l]) => `<button data-theme-set="${v}" aria-pressed="${theme === v}">${l}</button>`).join('')}</div>
   <h3>My stack</h3><p class="desc">Pick the vendors you run. Matching stories are marked and collected in the <em>My stack</em> section.</p>
   <div class="checks">${vendors.map(v => `<label><input type="checkbox" name="stack-v" value="${esc(v)}" ${st.vendors.includes(v) ? 'checked' : ''}> ${esc(v)}</label>`).join('')}</div>
   <label class="field">Extra keywords (comma-separated, e.g. <em>Jenkins, Grafana, Okta Verify</em>)<input type="text" id="stack-k" value="${esc(st.keywords.join(', '))}"></label>
@@ -1663,8 +1699,18 @@ function renderLandmarks() {
 }
 
 // ---------- main render ----------
+// Views that need 30 days of news or the full CVE data wait for the background load (lists of the last
+// 7 days don't; they fill in when the rest arrives).
+const NEEDS_FULL = new Set(['cves', 'patch', 'landmarks', 'trends', 'topics', 'categories', 'supply', 'developing', 'plugins', 'archive']);
 function render() {
   if (!D.news) return;
+  if (D.partial && (NEEDS_FULL.has(state.tab) || state.q)) {
+    renderTabs();
+    $('#brief').hidden = true;
+    $('#view').innerHTML = '<div class="empty">Loading…</div>';
+    D.rest.then(render);
+    return;
+  }
   renderTabs(); renderBrief();
   state.focus = -1;
   const t = state.tab;
@@ -1709,7 +1755,8 @@ let qTimer;
 $('#q').addEventListener('input', e => { clearTimeout(qTimer); const v = e.target.value; $('#q-clear').hidden = !v; $('#kbd-slash').hidden = !!v; qTimer = setTimeout(() => setQuery(v), 140); });
 $('#q').addEventListener('keydown', e => { if (e.key === 'Escape') { setQuery(''); e.target.blur(); } if (e.key === 'Enter') { const id = plainCveQuery(e.target.value); if (id) openCve(id); } });
 $('#q-clear').addEventListener('click', () => { setQuery(''); $('#q').focus(); });
-$$('[data-theme-set]').forEach(b => b.addEventListener('click', () => applyTheme(b.dataset.themeSet)));
+// Theme buttons live in the header and in Settings (which is created later), so one shared listener.
+document.addEventListener('click', e => { const b = e.target.closest('[data-theme-set]'); if (b) applyTheme(b.dataset.themeSet); });
 applyTheme(document.documentElement.dataset.theme || 'system');
 let resizeT; addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(renderRail, 200); });
 $('#about-sources').addEventListener('click', e => { e.preventDefault(); setTab('sources'); });
@@ -1839,14 +1886,34 @@ function showHelp() {
 $('#help-btn').addEventListener('click', showHelp);
 addEventListener('hashchange', () => { const m = location.hash.match(/^#(CVE-\d{4}-\d+)$/i); if (m) openCve(m[1]); });
 
+// ---------- install as an app ----------
+// Chrome, Edge and Android offer installation through an event; Safari on iPhone has no button, so iPhone
+// visitors get a one-time tip instead. Nothing shows once the site runs as an installed app.
+const installed = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+let installEvent = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvent = e; if (!installed()) $('#install-btn').hidden = false; });
+$('#install-btn').addEventListener('click', async () => {
+  if (!installEvent) return;
+  installEvent.prompt();
+  try { await installEvent.userChoice; } catch {}
+  installEvent = null; $('#install-btn').hidden = true;
+});
+addEventListener('appinstalled', () => { $('#install-btn').hidden = true; toast('Threat Recap is installed. Open it from your home screen or apps.'); });
+if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !installed() && !store.get('installTipDone', false)) {
+  setTimeout(() => { $('#install-tip').hidden = false; }, 6000);
+  $('#install-tip-close').addEventListener('click', () => { $('#install-tip').hidden = true; store.set('installTipDone', true); });
+}
+
 // ---------- auto refresh ----------
 async function checkForUpdates() {
   try {
-    const n = await getJSON('news.json', true);
-    if (n.generated === D.news.generated) return;
-    const fresh = n.stories.filter(s => !byId.has(s.id) && !s.b && !s.so).length;
+    // A tiny file says whether anything changed, so open pages don't re-download all the news every 5 minutes.
+    const v = await getJSON('version.json', true).catch(() => null);
+    if (v ? v.generated === D.news.generated : (await getJSON('news.json', true)).generated === D.news.generated) return;
     const oldNews = D.news, oldCves = D.cves;
-    await loadAll(true);            // data is swapped now; the view refreshes when convenient
+    await loadAll(true); await D.rest;   // data is swapped now; the view refreshes when convenient
+    const oldIds = new Set(oldNews.stories.map(s => s.id));
+    const fresh = D.news.stories.filter(s => !oldIds.has(s.id) && !s.b && !s.so).length;
     notifyChanges(oldNews, oldCves); syncSwState(); updateStatus();
     const apply = () => { $('#new-pill').hidden = true; render(); };
     if (!fresh || (scrollY < 200 && !document.activeElement?.matches('input') && !$('#drawer-root').innerHTML)) { apply(); return; }
@@ -1879,6 +1946,8 @@ function updateStatus() {
   catch (e) { $('#view').innerHTML = `<div class="empty">Couldn't load the news data (${esc(e.message)}). If you're running this yourself, run <code>node build.js</code> first.</div>`; return; }
   try { D.otd = await (await fetch('onthisday.json')).json(); } catch {}
   render(); updateStatus();
+  // The rest of the data arrives in the background; refresh the view once, unless the reader is busy.
+  D.rest.then(() => { if (!document.activeElement?.matches('input') && !$('#drawer-root').innerHTML) render(); updateStatus(); });
   const m = location.hash.match(/^#(CVE-\d{4}-\d+)$/i); if (m) openCve(m[1]);
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').then(() => { syncSwState(); if (settings.notify.on) registerPeriodicSync(); }).catch(() => {});
   if (D.config.goatcounter) { const g = document.createElement('script'); g.async = true; g.src = 'https://gc.zgo.at/count.js'; g.dataset.goatcounter = `https://${D.config.goatcounter}.goatcounter.com/count`; document.head.append(g); }

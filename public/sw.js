@@ -1,6 +1,6 @@
 // Offline support. Network-first for everything so a new deploy is picked up
 // immediately; the cache is only used when the network is unavailable.
-const CACHE = 'tr-v4';
+const CACHE = 'tr-v5';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'icon.svg', 'manifest.webmanifest', 'onthisday.json', 'favicon.ico'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL).catch(() => {})).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {

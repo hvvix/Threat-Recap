@@ -770,3 +770,26 @@ main.wrap > h1, main.wrap .panel h1 { font: 700 34px/1.15 var(--serif); letter-s
 /* Logo: faint outline so the ink square stays distinct on dark backgrounds */
 :root[data-theme="dark"] .brand img { box-shadow: 0 0 0 1px #3b3f47; border-radius: 7px; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .brand img { box-shadow: 0 0 0 1px #3b3f47; border-radius: 7px; } }
+
+/* Install prompts (Android/desktop button, one-time iPhone tip) */
+.install-btn { font: 600 12.5px var(--font); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--accent, #c2410c); color: var(--accent, #c2410c); background: transparent; cursor: pointer; white-space: nowrap; }
+.install-btn:hover { background: color-mix(in srgb, var(--accent, #c2410c) 10%, transparent); }
+.install-tip { position: fixed; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); z-index: 60; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--surface, #fff); color: var(--text); border: 1px solid var(--line-strong, #ccc); box-shadow: 0 8px 30px rgba(0,0,0,.18); font-size: 14px; line-height: 1.4; }
+.install-tip span { flex: 1; } .install-tip svg { width: 16px; height: 16px; vertical-align: -3px; }
+.install-tip button { background: none; border: 0; font-size: 16px; color: var(--muted); cursor: pointer; padding: 4px; }
+
+/* Phones: room for the search box and wider headlines */
+.theme-words button { width: auto; padding: 0 14px; font: 600 13px var(--font); }
+@media (max-width: 640px) {
+  .top-actions .theme-switch { display: none; }        /* theme moves to Settings → Appearance */
+  .install-btn { padding: 5px 10px; font-size: 12px; }
+  .install-btn .long { display: none; }
+}
+@media (max-width: 520px) {
+  /* Story cards: smaller picture, and the save/hide buttons move under the headline instead of beside it. */
+  .story.has-thumb:not(.hero-story) { grid-template-columns: minmax(0, 1fr) 76px !important; column-gap: 12px !important; }
+  .story.has-thumb:not(.hero-story) .thumb { width: 76px !important; margin-top: 30px; }
+  .story .head { flex-wrap: wrap; gap: 8px 12px; }
+  .story .head h3 { flex: 1 1 100%; }
+  .story h3 { font-size: 18px; line-height: 1.3; }
+}

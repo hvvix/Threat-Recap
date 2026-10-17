@@ -1,4 +1,5 @@
 {
+  "id": "./",
   "name": "Threat Recap",
   "short_name": "Threat Recap",
   "description": "Your daily cybersecurity recap: news, exploited CVEs, breaches, APTs, zero-days and ransomware in one free page.",
@@ -7,23 +8,16 @@
   "display": "standalone",
   "background_color": "#0f1012",
   "theme_color": "#17181b",
+  "categories": ["news", "security"],
   "icons": [
-    {
-      "src": "icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Latest news", "short_name": "Latest", "url": "./?tab=latest", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Zero-days", "short_name": "Zero-days", "url": "./?tab=zeroday", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Exploited CVEs", "short_name": "CVEs", "url": "./?tab=cves", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Ransomware", "short_name": "Ransomware", "url": "./?tab=ransomware", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
   ]
 }
