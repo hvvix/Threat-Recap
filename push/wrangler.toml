@@ -13,4 +13,4 @@ ALLOWED_ORIGINS = "https://hvvix.github.io,http://localhost:3000"
 
 [[kv_namespaces]]
 binding = "SUBS"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "f75e5644ec32465da8faf2539db1bdfc"
