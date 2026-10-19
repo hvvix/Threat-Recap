@@ -6,6 +6,11 @@ on:
   schedule:
     - cron: "7,27,47 * * * *"
   workflow_dispatch:
+    inputs:
+      push_test:
+        description: "Also send a test push to every subscriber"
+        type: boolean
+        default: false
   push:
     branches: [main]
 
@@ -65,6 +70,7 @@ jobs:
         run: |
           npm install --no-save --no-audit --no-fund --no-package-lock web-push@3
           node push.js
+          if [ "${{ inputs.push_test }}" = "true" ]; then node push.js --test; fi
         env:
           PUSH_API: ${{ vars.PUSH_API }}
           VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}

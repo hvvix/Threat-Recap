@@ -24,6 +24,20 @@ if (!PUSH_API || !PUSH_ADMIN_TOKEN || !VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
 const webpush = (await import('web-push')).default;
 webpush.setVapidDetails('https://github.com/hvvix/Threat-Recap', VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
+// `node push.js --test`: send a test message to every subscriber (checks delivery end to end).
+if (process.argv.includes('--test')) {
+  const r = await fetch(`${PUSH_API}/subscriptions`, { headers: { authorization: `Bearer ${PUSH_ADMIN_TOKEN}` } });
+  if (!r.ok) { log(`could not read subscriptions: HTTP ${r.status}`); process.exit(1); }
+  const subs = await r.json();
+  let ok = 0, gone = 0;
+  for (const s of subs) {
+    try { await webpush.sendNotification(s.sub, JSON.stringify({ title: 'Push alerts are working ✅', body: 'This is a test from Threat Recap. Real alerts arrive after updates, when there is something new.', url: SITE, tag: 'test' }), { TTL: 3600 }); ok++; }
+    catch (e) { if (e.statusCode === 404 || e.statusCode === 410) { await fetch(`${PUSH_API}/subscriptions/${s.id}`, { method: 'DELETE', headers: { authorization: `Bearer ${PUSH_ADMIN_TOKEN}` } }); gone++; } else log(`send failed (${e.statusCode || e.message})`); }
+  }
+  log(`test push: ${subs.length} subscribers, delivered to push services ${ok}, removed ${gone} expired`);
+  process.exit(0);
+}
+
 const news = await readJSON(path.join(ROOT, 'public', 'data', 'news.json'), { stories: [] });
 const cves = await readJSON(path.join(ROOT, 'public', 'data', 'cves.json'), { kev: [] });
 const state = await readJSON(STATE, null);
