@@ -86,3 +86,20 @@ public/index.html + app.js read those files; no server code or database.
 ```
 
 `cache/` keeps 30 days of history, CVE scores, PoC lookups, IOCs and AI notes between runs (GitHub Actions stores it with `actions/cache`).
+
+## Push alerts (optional)
+
+Visitors can get zero-day, newly-exploited-CVE and "my stack" alerts on their phone or computer even when the site is closed (Settings → Notifications → "Also when the app is closed"). iPhones need the site installed to the home screen first.
+
+How it works: the browser's push subscription is stored by a small Cloudflare Worker (`push/worker.js`, free plan). After each build, `push.js` reads the list with an admin token, sends encrypted Web Push messages for anything new, removes expired subscriptions and remembers what it sent in `cache/push-state.json`.
+
+Setup:
+
+1. Create a free Cloudflare account. In `push/`, run `npm install`, then `npx.cmd wrangler login`.
+2. `npx.cmd wrangler kv namespace create SUBS` and put the id into `push/wrangler.toml`.
+3. Generate keys: `npx web-push generate-vapid-keys`, and a long random admin token.
+4. `npx.cmd wrangler deploy`, then store the token: `npx.cmd wrangler secret put ADMIN_TOKEN` (feed it from a file with `<` so no line break is added).
+5. In GitHub → Settings → Secrets and variables → Actions: variables `PUSH_API` (the Worker URL) and `VAPID_PUBLIC_KEY`; secrets `VAPID_PRIVATE_KEY` and `PUSH_ADMIN_TOKEN`.
+6. Test: Actions → update-news → Run workflow → tick "Also send a test push to every subscriber".
+
+If you get your own domain, add it to `ALLOWED_ORIGINS` in `push/wrangler.toml` and redeploy the Worker.
