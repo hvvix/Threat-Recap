@@ -7,7 +7,7 @@
 //   GET  /subscriptions          (Authorization: Bearer ADMIN_TOKEN)  -> the list, for the update job
 //   DELETE /subscriptions/<id>   (Authorization: Bearer ADMIN_TOKEN)  -> remove an expired one
 
-const TOPICS = ['zeroday', 'kev', 'stack', 'breach', 'exploit', 'country', 'major', 'morning'];
+const TOPICS = ['zeroday', 'kev', 'stack', 'breach', 'exploit', 'country', 'major', 'morning', 'latest'];
 // Only real browser push services, so the store can't be used to make the update job call arbitrary URLs.
 const PUSH_HOSTS = /^(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9-]+\.notify\.windows\.com)$/i;
 

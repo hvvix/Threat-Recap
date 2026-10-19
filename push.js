@@ -7,6 +7,8 @@
 //   exploit  public exploit code for a critical (CVSS 9+) or actively exploited CVE
 //   country  ransomware claims and Hackmanac alerts naming a victim in the subscriber's country
 //   major    stories covered by 5+ outlets
+//   morning  one summary a day, 7-11 AM in the subscriber's time zone
+//   latest   one summary of each update's new stories (not at night)
 // Subscriptions come from the push Worker (push/worker.js). What was already sent is remembered in
 // cache/push-state.json, so each item is pushed once.
 //
@@ -158,8 +160,14 @@ const morningMsg = (() => {
   return label => ({ title: `☀️ Morning recap · ${label}`, body: `Last 24 h: ${parts.join(' · ')}${top ? `\nTop: ${cut(top.t, 100)}` : ''}`, url: SITE, tag: 'morning' });
 })();
 
+// Headlines of this update's new stories: most covered first, then newest.
+const latestMsg = fresh.length ? (() => {
+  const top = fresh.slice().sort((a, b) => b.r.length - a.r.length || b.d - a.d).slice(0, 3);
+  return { title: `📰 ${fresh.length} new stor${fresh.length === 1 ? 'y' : 'ies'}`, body: top.map(s => `• ${cut(s.t, 80)}`).join('\n') + (fresh.length > 3 ? `\n+${fresh.length - 3} more` : ''), url: SITE, tag: 'latest' };
+})() : null;
+
 const subs = state ? await subscribers() : [];
-let sent = 0, removed = 0, mornings = 0;
+let sent = 0, removed = 0, mornings = 0, latests = 0;
 for (const s of subs) {
   const out = [];
   for (const t of ['kev', 'zeroday', 'exploit', 'breach', 'major']) if (s.topics.includes(t) && shared[t]) out.push(shared[t]);
@@ -178,6 +186,13 @@ for (const s of subs) {
     if (process.env.PUSH_DEBUG) log(`  -> ${s.id.slice(0, 8)}: ${m.title}`);
     if (await send(s, m)) { morningSent[s.id] = t.date; mornings++; } else removed++;
   }
+  // Latest news: one summary of this update's new stories, not between 11 PM and 7 AM local time
+  // (the morning recap covers the night). Sent last; doesn't count towards the per-update limit.
+  const lt = s.topics.includes('latest') && alive && latestMsg && localTime(s.tz || 'UTC');
+  if (lt && lt.hour >= 7 && lt.hour < 23) {
+    if (process.env.PUSH_DEBUG) log(`  -> ${s.id.slice(0, 8)}: ${latestMsg.title}`);
+    if (await send(s, latestMsg)) latests++; else removed++;
+  }
 }
 // Only keep morning dates for current subscribers.
 const morning = Object.fromEntries(subs.filter(s => morningSent[s.id]).map(s => [s.id, morningSent[s.id]]));
@@ -185,4 +200,4 @@ const morning = Object.fromEntries(subs.filter(s => morningSent[s.id]).map(s => 
 // Remember what was seen (recent items only, so the file stays small).
 await fs.mkdir(path.dirname(STATE), { recursive: true });
 await fs.writeFile(STATE, JSON.stringify({ ...now, morning: subs.length ? morning : morningSent, at: Date.now() }));
-log(`${subs.length} subscribers · new: ${newKev.length} KEV, ${zeroDays.length} zero-day, ${newPocs.length} exploits, ${bigBreaches.length} big breaches, ${majors.length} major, ${newClaims.length} claims, ${fresh.length} stories · sent ${sent} alerts + ${mornings} morning recaps, removed ${removed}`);
+log(`${subs.length} subscribers · new: ${newKev.length} KEV, ${zeroDays.length} zero-day, ${newPocs.length} exploits, ${bigBreaches.length} big breaches, ${majors.length} major, ${newClaims.length} claims, ${fresh.length} stories · sent ${sent} alerts + ${mornings} morning recaps + ${latests} latest-news summaries, removed ${removed}`);
