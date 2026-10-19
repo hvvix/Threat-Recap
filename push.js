@@ -52,14 +52,6 @@ async function send(s, msg, urgency = 'normal') {
   }
 }
 
-// `node push.js --test`: a test message to every subscriber.
-if (process.argv.includes('--test')) {
-  const subs = await subscribers();
-  let ok = 0, gone = 0;
-  for (const s of subs) (await send(s, { title: 'Push alerts are working ✅', body: 'This is a test from Threat Recap. Real alerts arrive after updates, when there is something new.', url: SITE, tag: 'test' })) ? ok++ : gone++;
-  log(`test push: ${subs.length} subscribers, delivered ${ok}, removed ${gone} expired`);
-  process.exit(0);
-}
 
 const news = await readJSON(path.join(ROOT, 'public', 'data', 'news.json'), { stories: [] });
 const cves = await readJSON(path.join(ROOT, 'public', 'data', 'cves.json'), { kev: [], info: {}, poc: {}, kevIndex: {} });
@@ -165,6 +157,24 @@ const latestMsg = fresh.length ? (() => {
   const top = fresh.slice().sort((a, b) => b.r.length - a.r.length || b.d - a.d).slice(0, 3);
   return { title: `📰 ${fresh.length} new stor${fresh.length === 1 ? 'y' : 'ies'}`, body: top.map(s => `• ${cut(s.t, 80)}`).join('\n') + (fresh.length > 3 ? `\n+${fresh.length - 3} more` : ''), url: SITE, tag: 'latest' };
 })() : null;
+
+// `node push.js --test`: a test message to every subscriber, plus a sample of each summary they've turned on
+// (built from the last 24 hours), so it also shows which options are saved. Nothing is remembered.
+if (process.argv.includes('--test')) {
+  const all = await subscribers();
+  const top = recent.slice().sort((a, b) => b.r.length - a.r.length || b.d - a.d).slice(0, 3);
+  const latestSample = top.length ? { title: `📰 Sample: ${recent.length} stories in the last 24 h`, body: top.map(x => `• ${cut(x.t, 80)}`).join('\n'), url: SITE, tag: 'test-latest' } : null;
+  let ok = 0, gone = 0, samples = 0;
+  for (const s of all) {
+    if (!(await send(s, { title: 'Push alerts are working ✅', body: `This is a test from Threat Recap. Your alerts: ${s.topics.join(', ') || 'none'}.`, url: SITE, tag: 'test' }))) { gone++; continue; }
+    ok++;
+    if (s.topics.includes('latest') && latestSample && await send(s, latestSample)) samples++;
+    const t = s.topics.includes('morning') && localTime(s.tz || 'UTC');
+    if (t && await send(s, { ...morningMsg(t.label), title: `☀️ Sample morning recap · ${t.label}`, tag: 'test-morning' })) samples++;
+  }
+  log(`test push: ${all.length} subscribers, delivered ${ok} tests + ${samples} samples, removed ${gone} expired`);
+  process.exit(0);
+}
 
 const subs = state ? await subscribers() : [];
 let sent = 0, removed = 0, mornings = 0, latests = 0;
