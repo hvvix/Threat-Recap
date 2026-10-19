@@ -1180,6 +1180,7 @@ function openSettings() {
   <p class="desc">Alerts while this site is open in a tab. If you install the site as an app (Chrome/Edge), it can also check in the background about every hour.</p>
   <label class="toggle"><input type="checkbox" id="n-on" ${settings.notify.on && notifState === 'granted' ? 'checked' : ''}> Enable notifications ${notifState === 'denied' ? '<span class="muted">(blocked in your browser settings)</span>' : ''}</label>
   <div class="checks" style="grid-template-columns:1fr">
+    <label><input type="checkbox" name="n" value="morning" ${settings.notify.morning ? 'checked' : ''}> ☀️ Morning recap: one summary a day, 7–11 AM your time <span class="muted">(push alerts only)</span></label>
     <label><input type="checkbox" name="n" value="zeroday" ${settings.notify.zeroday ? 'checked' : ''}> New zero-day / actively exploited stories</label>
     <label><input type="checkbox" name="n" value="kev" ${settings.notify.kev ? 'checked' : ''}> New CISA KEV entries</label>
     <label><input type="checkbox" name="n" value="stack" ${settings.notify.stack ? 'checked' : ''}> Stories about my stack</label>
@@ -1238,8 +1239,9 @@ async function pushSubscribe() {
   if (Notification.permission !== 'granted' && await Notification.requestPermission() !== 'granted') throw new Error('notifications are blocked');
   const reg = await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(D.config.vapidPublic) });
-  const topics = ['zeroday', 'kev', 'stack', 'exploit', 'breach', 'major', 'country'].filter(t => settings.notify[t]);
-  const r = await fetch(`${D.config.pushApi}/subscribe`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), topics, vendors: settings.stack.vendors, country: settings.country || guessCountry() }) });
+  const topics = ['morning', 'zeroday', 'kev', 'stack', 'exploit', 'breach', 'major', 'country'].filter(t => settings.notify[t]);
+  const tz = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { return ''; } })();
+  const r = await fetch(`${D.config.pushApi}/subscribe`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), topics, vendors: settings.stack.vendors, country: settings.country || guessCountry(), tz }) });
   if (!r.ok) throw new Error(`server said ${r.status}`);
 }
 async function pushUnsubscribe() {
