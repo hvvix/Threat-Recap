@@ -2,12 +2,12 @@
 // The site posts a browser's push subscription here; the GitHub update job reads the list (with a secret
 // token) and sends the alerts itself. Nothing else is stored: no IP addresses, no accounts.
 //
-//   POST /subscribe      { subscription, topics: ["zeroday","kev","stack"], vendors: ["Fortinet", ...] }
+//   POST /subscribe      { subscription, topics: ["zeroday","kev","stack","breach","exploit","country","major"], vendors: ["Fortinet", ...], country: "SA" }
 //   POST /unsubscribe    { subscription }
 //   GET  /subscriptions          (Authorization: Bearer ADMIN_TOKEN)  -> the list, for the update job
 //   DELETE /subscriptions/<id>   (Authorization: Bearer ADMIN_TOKEN)  -> remove an expired one
 
-const TOPICS = ['zeroday', 'kev', 'stack'];
+const TOPICS = ['zeroday', 'kev', 'stack', 'breach', 'exploit', 'country', 'major'];
 // Only real browser push services, so the store can't be used to make the update job call arbitrary URLs.
 const PUSH_HOSTS = /^(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9-]+\.notify\.windows\.com)$/i;
 
@@ -44,8 +44,9 @@ export default {
       if (!sub.keys?.p256dh || !sub.keys?.auth) return json({ error: 'missing keys' }, 400, h);
       const topics = [...new Set((body.topics || []).filter(t => TOPICS.includes(t)))];
       const vendors = (body.vendors || []).filter(v => typeof v === 'string' && v.length <= 60).slice(0, 60);
+      const country = /^[A-Z]{2}$/.test(body.country || '') ? body.country : '';
       if (!topics.length) { await env.SUBS.delete(id); return json({ ok: true, removed: true }, 200, h); }
-      await env.SUBS.put(id, JSON.stringify({ sub: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, topics, vendors, at: Date.now() }));
+      await env.SUBS.put(id, JSON.stringify({ sub: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, topics, vendors, country, at: Date.now() }));
       return json({ ok: true }, 200, h);
     }
 

@@ -1183,6 +1183,11 @@ function openSettings() {
     <label><input type="checkbox" name="n" value="zeroday" ${settings.notify.zeroday ? 'checked' : ''}> New zero-day / actively exploited stories</label>
     <label><input type="checkbox" name="n" value="kev" ${settings.notify.kev ? 'checked' : ''}> New CISA KEV entries</label>
     <label><input type="checkbox" name="n" value="stack" ${settings.notify.stack ? 'checked' : ''}> Stories about my stack</label>
+    <label><input type="checkbox" name="n" value="exploit" ${settings.notify.exploit ? 'checked' : ''}> Exploit code released for a critical or actively exploited CVE</label>
+    <label><input type="checkbox" name="n" value="breach" ${settings.notify.breach ? 'checked' : ''}> Big breaches (1 million+ records)</label>
+    <label><input type="checkbox" name="n" value="major" ${settings.notify.major ? 'checked' : ''}> Major developing stories (5+ outlets)</label>
+    <label><input type="checkbox" name="n" value="country" ${settings.notify.country ? 'checked' : ''}> Attacks in my country:
+      <select id="n-country" style="margin-left:6px">${countryOptions(settings.country || guessCountry())}</select></label>
     <label><input type="checkbox" name="n" value="saved" ${settings.notify.saved ? 'checked' : ''}> Updates to saved stories</label>
   </div>${pushAvailable() ? `
   <label class="toggle" style="margin-top:10px"><input type="checkbox" id="n-push" ${settings.notify.push ? 'checked' : ''}> Also when the app is closed (push alerts)</label>
@@ -1203,6 +1208,7 @@ async function applySettingsFromDrawer() {
   settings.stack.vendors = $$('input[name=stack-v]:checked', dr).map(i => i.value);
   settings.stack.keywords = ($('#stack-k', dr)?.value || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 30);
   for (const i of $$('input[name=n]', dr)) settings.notify[i.value] = i.checked;
+  if ($('#n-country', dr)) settings.country = $('#n-country', dr).value;
   const wantOn = $('#n-on', dr)?.checked;
   if (wantOn && Notification.permission !== 'granted') { const p = await Notification.requestPermission(); settings.notify.on = p === 'granted'; }
   else settings.notify.on = !!wantOn;
@@ -1216,6 +1222,14 @@ async function applySettingsFromDrawer() {
   saveSettings(); closeDrawer(); render(); toast('Settings saved' + pushMsg);
 }
 
+// Country for "attacks in my country": chosen in Settings, otherwise guessed from the browser language.
+const guessCountry = () => (navigator.languages || [navigator.language]).map(l => (l.split('-')[1] || '').toUpperCase()).find(c => /^[A-Z]{2}$/.test(c)) || 'US';
+function countryOptions(selected) {
+  // Every country seen in ransomware claims, plus the selected one, sorted by name.
+  const codes = new Set([...(D.rw?.totals?.countriesAll || []).map(c => c[0]), selected].filter(c => /^[A-Z]{2}$/.test(c)));
+  return [...codes].map(c => [c, regionName(c)]).sort((a, b) => a[1].localeCompare(b[1])).map(([c, n]) => `<option value="${c}" ${c === selected ? 'selected' : ''}>${esc(n)}</option>`).join('');
+}
+
 // ----- Push alerts (Web Push through the push Worker; see push/worker.js and push.js) -----
 const isIPhone = () => /iPhone|iPad|iPod/.test(navigator.userAgent);
 const pushAvailable = () => !!(D.config.pushApi && D.config.vapidPublic && 'PushManager' in window && 'serviceWorker' in navigator && 'Notification' in window);
@@ -1224,8 +1238,8 @@ async function pushSubscribe() {
   if (Notification.permission !== 'granted' && await Notification.requestPermission() !== 'granted') throw new Error('notifications are blocked');
   const reg = await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(D.config.vapidPublic) });
-  const topics = ['zeroday', 'kev', 'stack'].filter(t => settings.notify[t]);
-  const r = await fetch(`${D.config.pushApi}/subscribe`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), topics, vendors: settings.stack.vendors }) });
+  const topics = ['zeroday', 'kev', 'stack', 'exploit', 'breach', 'major', 'country'].filter(t => settings.notify[t]);
+  const r = await fetch(`${D.config.pushApi}/subscribe`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ subscription: sub.toJSON(), topics, vendors: settings.stack.vendors, country: settings.country || guessCountry() }) });
   if (!r.ok) throw new Error(`server said ${r.status}`);
 }
 async function pushUnsubscribe() {
@@ -1241,7 +1255,7 @@ async function notify(title, body, url) {
   try { const reg = await navigator.serviceWorker?.getRegistration(); if (reg) return reg.showNotification(title, { body, icon: 'icon.svg', badge: 'icon.svg', data: { url }, tag: url }); } catch {}
   try { new Notification(title, { body, icon: 'icon.svg' }); } catch {}
 }
-function notifyChanges(oldNews, oldCves) {
+function notifyChanges(oldNews, oldCves, oldRw) {
   if (!settings.notify.on) return;
   const known = new Set(oldNews.stories.map(s => s.id));
   const fresh = D.news.stories.filter(s => !known.has(s.id) && !s.b && !s.so);
@@ -1251,6 +1265,20 @@ function notifyChanges(oldNews, oldCves) {
   if (settings.notify.zeroday && !viaPush) for (const s of fresh.filter(s => s.tg.includes('zeroday')).slice(0, 2)) out.push(['Zero-day: ' + s.s, s.t, s.u]);
   if (settings.notify.kev && !viaPush) { const old = new Set((oldCves.kev || []).map(k => k.id)); const n = (D.cves.kev || []).filter(k => !old.has(k.id)); if (n.length) out.push([`${n.length} new actively exploited CVE${n.length > 1 ? 's' : ''} (CISA KEV)`, n.slice(0, 3).map(k => `${k.id} ${k.v} ${k.p}`).join('\n'), `./?tab=cves#${n[0].id}`]); }
   if (settings.notify.stack && !viaPush) for (const s of fresh.filter(isMine).slice(0, 2)) out.push(['Your stack: ' + s.ve.concat(s.s).slice(0, 2).join(' · '), s.t, s.u]);
+  if (!viaPush) {
+    if (settings.notify.exploit) {
+      const crit = id => (D.cves.info?.[id]?.s ?? 0) >= 9 || D.cves.kevIndex?.[id];
+      const n = Object.keys(D.cves.poc || {}).filter(id => D.cves.poc[id].n && !oldCves.poc?.[id]?.n && crit(id));
+      if (n.length) out.push([`Exploit released: ${n[0]}${D.cves.info?.[n[0]]?.s != null ? ` (CVSS ${D.cves.info[n[0]].s})` : ''}`, n.length > 1 ? `+${n.length - 1} more` : 'Public exploit code is now available', `./?tab=cves#${n[0]}`]);
+    }
+    if (settings.notify.breach) { const b = fresh.filter(s => s.tg.includes('breach') && s.rc >= 1e6).sort((a, c) => c.rc - a.rc)[0]; if (b) out.push([`Breach: ${(b.rc / 1e6).toFixed(1).replace(/\.0$/, '')}M ${b.ru || 'records'}`, b.t, b.u]); }
+    if (settings.notify.major) { const before = new Map(oldNews.stories.map(s => [s.id, s.r.length])); const m = D.news.stories.find(s => s.r.length + 1 >= 5 && (before.get(s.id) ?? -1) + 1 < 5); if (m) out.push([`Major story (${m.r.length + 1} outlets)`, m.t, m.u]); }
+    if (settings.notify.country && settings.country && oldRw) {
+      const seen = new Set((oldRw.recent || []).map(v => `${v.g}|${v.t}`));
+      const c = (D.rw?.recent || []).filter(v => v.c === settings.country && !seen.has(`${v.g}|${v.t}`));
+      if (c.length) out.push([`Attack${c.length > 1 ? 's' : ''} in ${regionName(settings.country)}${c.length > 1 ? ` (${c.length})` : ''}`, `${c[0].g} claims ${c[0].t}`, './?tab=ransomware']);
+    }
+  }
   if (settings.notify.saved) { const u = D.news.stories.filter(s => updatesFor(s) && !updatesFor(oldNews.stories.find(o => o.id === s.id) || s)); for (const s of u.slice(0, 1)) out.push(['Saved story updated', s.t, './?tab=saved']); }
   out.slice(0, 4).forEach(([t, b, u]) => notify(t, b, u));
 }
@@ -1940,11 +1968,11 @@ async function checkForUpdates() {
     // A tiny file says whether anything changed, so open pages don't re-download all the news every 5 minutes.
     const v = await getJSON('version.json', true).catch(() => null);
     if (v ? v.generated === D.news.generated : (await getJSON('news.json', true)).generated === D.news.generated) return;
-    const oldNews = D.news, oldCves = D.cves;
+    const oldNews = D.news, oldCves = D.cves, oldRw = D.rw;
     await loadAll(true); await D.rest;   // data is swapped now; the view refreshes when convenient
     const oldIds = new Set(oldNews.stories.map(s => s.id));
     const fresh = D.news.stories.filter(s => !oldIds.has(s.id) && !s.b && !s.so).length;
-    notifyChanges(oldNews, oldCves); syncSwState(); updateStatus();
+    notifyChanges(oldNews, oldCves, oldRw); syncSwState(); updateStatus();
     const apply = () => { $('#new-pill').hidden = true; render(); };
     if (!fresh || (scrollY < 200 && !document.activeElement?.matches('input') && !$('#drawer-root').innerHTML)) { apply(); return; }
     const pill = $('#new-pill'); pill.textContent = `↑ ${fresh} new ${fresh > 1 ? 'stories' : 'story'}`; pill.hidden = false;
