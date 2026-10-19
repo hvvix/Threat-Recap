@@ -1224,7 +1224,28 @@ async function applySettingsFromDrawer() {
 }
 
 // Country for "attacks in my country": chosen in Settings, otherwise guessed from the browser language.
-const guessCountry = () => (navigator.languages || [navigator.language]).map(l => (l.split('-')[1] || '').toUpperCase()).find(c => /^[A-Z]{2}$/.test(c)) || 'US';
+// The time zone says where the device is (Asia/Qatar → QA); the language ("en-US") often doesn't, so it's only a fallback.
+const TZ_COUNTRY = {
+  'Asia/Qatar': 'QA', 'Asia/Riyadh': 'SA', 'Asia/Dubai': 'AE', 'Asia/Kuwait': 'KW', 'Asia/Bahrain': 'BH', 'Asia/Muscat': 'OM', 'Asia/Amman': 'JO',
+  'Asia/Beirut': 'LB', 'Asia/Jerusalem': 'IL', 'Asia/Baghdad': 'IQ', 'Asia/Tehran': 'IR', 'Africa/Cairo': 'EG', 'Europe/Istanbul': 'TR',
+  'Europe/London': 'GB', 'Europe/Dublin': 'IE', 'Europe/Paris': 'FR', 'Europe/Berlin': 'DE', 'Europe/Madrid': 'ES', 'Europe/Lisbon': 'PT',
+  'Europe/Rome': 'IT', 'Europe/Amsterdam': 'NL', 'Europe/Brussels': 'BE', 'Europe/Zurich': 'CH', 'Europe/Vienna': 'AT', 'Europe/Stockholm': 'SE',
+  'Europe/Oslo': 'NO', 'Europe/Copenhagen': 'DK', 'Europe/Helsinki': 'FI', 'Europe/Warsaw': 'PL', 'Europe/Prague': 'CZ', 'Europe/Athens': 'GR',
+  'Europe/Kyiv': 'UA', 'Europe/Kiev': 'UA', 'Europe/Moscow': 'RU', 'America/Toronto': 'CA', 'America/Vancouver': 'CA', 'America/Mexico_City': 'MX',
+  'America/Sao_Paulo': 'BR', 'America/Argentina/Buenos_Aires': 'AR', 'America/Bogota': 'CO', 'America/Santiago': 'CL', 'Asia/Kolkata': 'IN',
+  'Asia/Calcutta': 'IN', 'Asia/Karachi': 'PK', 'Asia/Singapore': 'SG', 'Asia/Kuala_Lumpur': 'MY', 'Asia/Bangkok': 'TH', 'Asia/Jakarta': 'ID',
+  'Asia/Manila': 'PH', 'Asia/Ho_Chi_Minh': 'VN', 'Asia/Shanghai': 'CN', 'Asia/Hong_Kong': 'HK', 'Asia/Taipei': 'TW', 'Asia/Tokyo': 'JP',
+  'Asia/Seoul': 'KR', 'Pacific/Auckland': 'NZ', 'Africa/Johannesburg': 'ZA', 'Africa/Lagos': 'NG', 'Africa/Nairobi': 'KE', 'Africa/Casablanca': 'MA',
+};
+const guessCountry = () => {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    if (TZ_COUNTRY[tz]) return TZ_COUNTRY[tz];
+    if (/^America\/(New_York|Chicago|Denver|Phoenix|Los_Angeles|Anchorage|Detroit|Indiana)|^Pacific\/Honolulu/.test(tz)) return 'US';
+    if (/^Australia\//.test(tz)) return 'AU';
+  } catch {}
+  return (navigator.languages || [navigator.language]).map(l => (l.split('-')[1] || '').toUpperCase()).find(c => /^[A-Z]{2}$/.test(c)) || 'US';
+};
 function countryOptions(selected) {
   // Every country seen in ransomware claims, plus the selected one, sorted by name.
   const codes = new Set([...(D.rw?.totals?.countriesAll || []).map(c => c[0]), selected].filter(c => /^[A-Z]{2}$/.test(c)));
