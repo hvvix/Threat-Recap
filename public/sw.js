@@ -1,6 +1,6 @@
 // Offline support. Network-first for everything so a new deploy is picked up
 // immediately; the cache is only used when the network is unavailable.
-const CACHE = 'tr-v6';
+const CACHE = 'tr-v7';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'icon.svg', 'manifest.webmanifest', 'onthisday.json', 'favicon.ico'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL).catch(() => {})).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => {
@@ -10,10 +10,16 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
   const key = url.pathname.endsWith('/') ? url.pathname + 'index.html' : url.pathname;
+  const page = e.request.mode === 'navigate';
   e.respondWith(fetch(e.request).then(r => {
     if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(key, copy)); }
+    // Safari shows a blank page if a page load is answered with a redirected response; hand it over as a plain one.
+    if (page && r.redirected) return r.blob().then(b => new Response(b, { status: r.status, statusText: r.statusText, headers: r.headers }));
     return r;
-  }).catch(() => caches.match(key).then(r => r || caches.match(url.pathname)).then(r => r || Response.error())));
+  }).catch(() => caches.match(key).then(r => r || caches.match(url.pathname))
+    // Offline page load with nothing cached for that address: show the cached home page rather than an error.
+    .then(r => r || (page ? caches.match(new URL('index.html', self.registration.scope).pathname) : null))
+    .then(r => r || Response.error())));
 });
 
 // ---- Push alerts (sent by the update job through the browser's push service, even when the app is closed) ----

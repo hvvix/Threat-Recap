@@ -643,7 +643,8 @@ function cveSummary(x, max = 260) {
   if (!x) return 'No description published yet.';
   x = x.replace(/\s+/g, ' ').trim();
   // Split only at a full stop followed by a capital letter, so "23.9.7 and prior" stays intact.
-  const parts = x.split(/(?<=[.!?])\s+(?=[A-Z(])/);
+  // Split into sentences without regex lookbehind (unsupported in Safari before iOS 16.4).
+  const parts = x.replace(/([.!?])\s+(?=[A-Z(])/g, '$1\u0001').split('\u0001');
   let out = '';
   for (const p of parts) { if (out && (out + ' ' + p).length > max) break; out += (out ? ' ' : '') + p; }
   return out.length > max + 60 ? out.slice(0, max).replace(/\s+\S*$/, '') + '…' : out;
@@ -835,7 +836,7 @@ function renderRansomware() {
   // Last 10 days: a plain bar per day; the selected day's breakdown sits underneath.
   const days = R.days10 || [];
   const maxDay = Math.max(1, ...days.map(d => d.n));
-  const sel = days.find(d => d.d === state.rwSel) || days.at(-1);
+  const sel = days.find(d => d.d === state.rwSel) || days[days.length - 1];
   const dfmt = (d, o) => new Date(d + 'T12:00:00Z').toLocaleDateString(undefined, { ...o, timeZone: 'UTC' });
   const topList = (arr, label = x => esc(x)) => arr.length ? arr.map(([k, n]) => `${label(k)} <span class="muted">${n}</span>`).join(', ') : '<span class="muted">—</span>';
   const strip = days.length ? `<section class="panel d10-panel"><div class="panel-head"><h2>Last 10 days</h2><span class="muted">${days.reduce((a, d) => a + d.n, 0)} claims</span></div>
@@ -878,7 +879,7 @@ function renderRansomware() {
     const chart = `<div class="cols" role="img" aria-label="Claimed victims per day, last 30 days">
       <span class="ymax">${tickMax}</span><span class="gridline" style="top:18px"></span><span class="gridline" style="top:calc(18px + (100% - 18px)/2)"></span>
       ${daily.map(([d, n]) => `<div class="col" data-tip="${esc(new Date(d + 'T00:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' }))}: ${n} claims"><i style="height:${(n / tickMax) * 100}%"></i></div>`).join('')}
-    </div><div class="cols-axis"><span>${daily[0]?.[0] || ''}</span><span>${daily.at(-1)?.[0] || ''}</span></div>`;
+    </div><div class="cols-axis"><span>${daily[0]?.[0] || ''}</span><span>${daily[daily.length - 1]?.[0] || ''}</span></div>`;
     body = `<div class="panel"><h2>Claimed victims per day</h2><p class="desc">Last 30 days, by date discovered on leak sites.</p>${chart}</div>
     ${D.rw.countryDaily ? mapHtml() : ''}
     <div class="grid-2">
@@ -1153,7 +1154,7 @@ async function drawMap(dayIdx = 30) {
   const bin = n => { let b = 0; MAP_BINS.forEach((t, i) => { if (n >= t) b = i + 1; }); return b; };
   if (!el.querySelector('svg')) el.innerHTML = `<svg viewBox="0 0 ${world.w} ${world.h}" role="img" aria-label="World map of claimed ransomware victims">${Object.entries(world.paths).map(([c, d]) => `<path data-cc="${c}" d="${d}"/>`).join('')}</svg>`;
   for (const p of el.querySelectorAll('path')) { const c = p.dataset.cc, n = counts[c] || 0; p.setAttribute('class', n ? 'm' + bin(n) : 'm0'); p.dataset.tip = `${regionName(c)}: ${n} claim${n === 1 ? '' : 's'}`; }
-  const lastDay = upto.at(-1)?.[0];
+  const lastDay = upto[upto.length - 1]?.[0];
   if ($('#map-label')) $('#map-label').textContent = lastDay ? `through ${new Date(lastDay + 'T12:00:00Z').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}` : '';
 }
 let mapTimer;
@@ -1387,7 +1388,7 @@ function fixLine(id) {
   const parts = (f?.p || []).slice(0, 2).map(p => p.f.length ? `${esc(p.p || 'Fixed')}: upgrade to <b>${p.f.slice(0, 3).map(esc).join('</b>, <b>')}</b>${p.f.length > 3 ? ' …' : ''} or later` : `${esc(p.p)}: versions up to ${p.u.map(esc).join(', ')} are affected`);
   const adv = f?.a?.[0] || k?.adv?.[0];
   if (!parts.length && !adv && !k?.ra) return '';
-  const action = !parts.length && k?.ra ? esc(k.ra.split(/(?<=\.)\s/)[0]) : '';
+  const action = !parts.length && k?.ra ? esc(k.ra.replace(/\.\s/g, '.\u0001').split('\u0001')[0]) : '';
   return `<div class="cr-fix"><span class="lbl">Fix</span>${parts.join('; ') || action || 'See the vendor advisory'}${adv ? ` · <a href="${url(adv)}" target="_blank" rel="noopener">Vendor advisory ↗</a>` : ''}</div>`;
 }
 function fixSection(id) {
@@ -1396,7 +1397,7 @@ function fixSection(id) {
   const advs = [...new Set([...(f?.a || []), ...(k?.adv || [])])];
   return `<h3>How to fix</h3>
     ${(f?.p || []).length ? `<table class="fix-table"><thead><tr><th>Product</th><th>Fixed in</th></tr></thead><tbody>${f.p.map(p => `<tr><td>${esc(p.p)}</td><td>${p.f.length ? p.f.map(v => `<code>${esc(v)}</code>`).join(' ') : `Affected up to ${p.u.map(esc).join(', ')}`}</td></tr>`).join('')}</tbody></table>` : ''}
-    ${k?.ra ? `<p><b>CISA required action:</b> ${esc(k.ra.split(/(?<=\.)\s/).slice(0, 2).join(' '))}</p>` : ''}
+    ${k?.ra ? `<p><b>CISA required action:</b> ${esc(k.ra.replace(/\.\s/g, '.\u0001').split('\u0001').slice(0, 2).join(' '))}</p>` : ''}
     ${advs.length ? `<ul class="rel">${advs.map(u => { let h = u; try { h = new URL(u).hostname; } catch {} return `<li><a href="${url(u)}" target="_blank" rel="noopener">Advisory on ${esc(h)}</a> <a class="muted" href="${url(wayback(u))}" target="_blank" rel="noopener">(archived copy)</a></li>`; }).join('')}</ul>` : ''}`;
 }
 // Public exploit code (GitHub PoCs via PoC-in-GitHub, plus Exploit-DB) shown right in CVE lists.
@@ -1603,7 +1604,7 @@ function renderArchive() {
   const q = state.q.trim().toLowerCase(), terms = parseQuery(state.q);
   const months = idx.months.map(x => x.m);
   // A search always covers the whole year; otherwise show the chosen month (default: the current one).
-  const sel = q ? 'all' : state.arMonth && (state.arMonth === 'all' || months.includes(state.arMonth)) ? state.arMonth : months.at(-1);
+  const sel = q ? 'all' : state.arMonth && (state.arMonth === 'all' || months.includes(state.arMonth)) ? state.arMonth : months[months.length - 1];
   const wantMonths = sel === 'all' ? months : [sel];
   const subs = [['news', `News (${idx.totals.news.toLocaleString()})`], ['cves', `CVEs (${idx.totals.cves.toLocaleString()})`], ['kev', `Exploited (${idx.totals.kev})`], ['rw', `Ransomware (${idx.totals.rw.toLocaleString()})`], ['hibp', `Breaches (${idx.totals.hibp})`], ['coverage', 'Coverage']];
   const metric = { news: 'news', cves: 'cves', kev: 'kev', rw: 'rw', hibp: 'news', coverage: 'news' }[sub];

@@ -18,6 +18,7 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon.ico" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Threat Recap"><meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="alternate" type="application/rss+xml" href="feeds/latest.xml" title="Threat Recap — latest">
 <link rel="alternate" type="application/rss+xml" href="feeds/zeroday.xml" title="Threat Recap — zero-days">
 <link rel="manifest" href="manifest.webmanifest">
@@ -88,6 +89,16 @@
 <div class="toast" id="toast" role="status" hidden></div>
 <div class="tip" id="tip" hidden></div>
 <button class="new-pill" id="new-pill" hidden></button>
+<script>
+// If the app can't start (e.g. an old browser), say so instead of leaving a blank screen.
+addEventListener('error', function (e) {
+  var v = document.getElementById('view');
+  if (!v || v.querySelector('.story, .cve-row, .panel')) return;
+  var d = document.createElement('div'); d.className = 'empty';
+  d.textContent = 'Threat Recap could not start on this browser (' + (e.message || 'script error') + '). Updating your browser or iOS usually fixes this.';
+  v.innerHTML = ''; v.appendChild(d);
+});
+</script>
 <script src="app.js"></script>
 </body>
 </html>
