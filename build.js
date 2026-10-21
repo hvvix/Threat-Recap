@@ -738,7 +738,8 @@ async function main() {
   });
   if (needPub.length) { await writeJSON(path.join(CACHE, 'cves.json'), cveCache); log(`Landmarks: publication dates for ${needPub.length}`); }
   const pubOf = ids => { const d = ids.map(id => cveCache[id]?.pub).filter(Boolean); return d.length ? Math.min(...d) : undefined; };
-  const landmarks = LANDMARKS.map(l => ({ ...l, pub: pubOf(l.cves), kevAt: l.cves.map(id => kevAll[id]?.d).filter(Boolean).sort()[0], live: Object.fromEntries(l.cves.map(id => {
+  const landmarks = LANDMARKS.map(l => ({ ...l, pub: pubOf(l.cves) || (l.date ? Date.parse(l.date) : undefined),   // "date" for entries CVE.org has not published yet
+ kevAt: l.cves.map(id => kevAll[id]?.d).filter(Boolean).sort()[0], live: Object.fromEntries(l.cves.map(id => {
     const c = cveCache[id] || {}, k = kevAll[id], p = pocCache[id];
     return [id, { ok: !!(c.x || c.sc || k), s: c.nvd?.s ?? c.sc?.s, v: c.nvd?.v ?? c.sc?.v, vendor: c.nvd && c.sc && c.sc.s !== c.nvd.s ? c.sc.s : undefined, kev: k?.d, rw: k?.rw || 0, epss: epss[id], poc: p?.n || 0, pocTop: p?.top?.[0] }];
   })) }));

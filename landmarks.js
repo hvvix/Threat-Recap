@@ -161,6 +161,9 @@ export const LANDMARKS = [
     what: 'Key reinstallation attacks against the WPA2 handshake allow decrypting Wi-Fi traffic.',
     why: 'A flaw in the Wi-Fi standard itself, affecting virtually every device.' },
   // 2025
+  { name: 'PHP2Shell', cves: ['CVE-2026-109618', 'CVE-2026-109619'], year: 2026, date: '2026-10-21', k: 'web', product: 'PHP engine (versions 5, 6, 7 and 8)',
+    what: 'Two flaws in the core PHP engine allow remote code execution and Heartbleed-style memory disclosure on sites running PHP; found with the help of AI-assisted research.',
+    why: 'PHP runs roughly 70% of websites. Details leaked a day before the planned disclosure, a public proof of concept followed, Cloudflare saw early exploitation attempts, and agencies urged taking sites offline until the out-of-cycle patches of 21 October 2026 were applied.' },
   { name: 'ToolShell', cves: ['CVE-2025-53770'], year: 2025, k: 'web', product: 'Microsoft SharePoint Server (on-premises)',
     what: 'Unsafe deserialization gives unauthenticated remote code execution on on-premises SharePoint; a variant that bypassed the earlier fixes for CVE-2025-49704 and CVE-2025-49706.',
     why: 'Mass-exploited as a zero-day in July 2025, including by China-linked groups and ransomware operators; attackers stole machine keys so access survived patching.' },
