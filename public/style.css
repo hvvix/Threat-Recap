@@ -532,7 +532,7 @@ main.wrap > h1, main.wrap .panel h1 { font: 700 34px/1.15 var(--serif); letter-s
   .story.hero-story.has-thumb { display: flex; flex-direction: column-reverse; }
   .story.hero-story .thumb { width: 100%; margin: 0 0 16px; }
   .story.hero-story h3 { font-size: 28px; }
-  .cve-row, .cve-row:has(.cr-rank) { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .cve-row, .cve-row:has(.cr-rank), .cve-row:not(:has(.cr-side)), .cve-row:has(.cr-rank):not(:has(.cr-side)) { grid-template-columns: minmax(0, 1fr); gap: 10px; }   /* the rank column is hidden below; no empty column left for it */
   .cve-row:has(.cr-rank) .cr-rank { display: none; }
   .cr-side { border-left: 0; padding-left: 0; flex-direction: row; flex-wrap: wrap; gap: 4px 14px; }
   .d10 { grid-template-columns: repeat(10, 64px); overflow-x: auto; }
