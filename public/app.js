@@ -735,6 +735,14 @@ function patchFirst() {
     const mentions = (cveMentions.get(id) || []).reduce((a, s) => a + (s.b ? 1 : s.r.length + 1), 0);
     let score = 0; const why = [];
     if (kd) { score += 50; why.push(['Exploited in the wild', 'crit']); if (now - Date.parse(kd) < 30 * DAY) score += 10; }
+    // CISA often lists exploited CVEs days or weeks late. Exploitation reported by at least two outlets
+    // counts almost as much (two, so a single weekly roundup can't lift unrelated CVEs).
+    else {
+      const reports = (cveMentions.get(id) || []).filter(s => !s.b && s.tg.includes('zeroday')).reduce((a, s) => a + s.r.length + 1, 0);
+      if (reports >= 2) { score += 40; why.push(['Exploitation reported (news)', 'crit']); }
+    }
+    // Near-certain exploitation likelihood plus public exploit code: weaponized.
+    if (e && e[0] >= 0.9 && (p?.n || p?.edb)) { score += 10; why.push(['Weaponized', 'crit']); }
     if (k?.rw) { score += 8; why.push(['Used by ransomware', 'crit']); }
     if (e) { score += e[0] * 30; if (e[0] >= 0.1) why.push([`EPSS ${(e[0] * 100).toFixed(e[0] >= 0.995 ? 1 : 0)}%`, e[0] >= 0.5 ? 'high' : 'med']); }
     if (p?.n || p?.edb) { score += 12 + Math.min(8, Math.log2(1 + (p.top?.[0]?.s || 0))); why.push([p.n ? `Public PoC (${p.n})` : 'Exploit-DB', 'high']); }
