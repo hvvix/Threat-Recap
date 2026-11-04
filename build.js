@@ -7,6 +7,7 @@
 //   GITHUB_TOKEN=...         optional, raises GitHub API rate limits
 //   SITE_URL=https://...     optional, absolute links for sitemap/share previews
 //   ANTHROPIC_API_KEY=...    optional, one-line AI "why it matters" notes (npm install first)
+//   CLOUDFLARE_API_TOKEN=... optional, Cloudflare Radar data for the Internet pulse section (radar.js)
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -19,6 +20,7 @@ import { writeArchive } from './archive.js';
 import { LANDMARKS } from './landmarks.js';
 import { writeSite } from './site.js';
 import { catRegex, PRODUCTS } from './topics.js';
+import { buildRadar } from './radar.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(ROOT, 'public', 'data');
@@ -654,6 +656,8 @@ async function main() {
   let ransomware = null, supply = [];
   try { ransomware = await fetchRansomware(stories); log(`Ransomware: ${ransomware.total30} claims / 30d via ${ransomware.source}`); } catch (e) { log('Ransomware failed:', e.message); }
   try { supply = await fetchSupplyChain(); log(`Supply chain advisories: ${supply.length}`); } catch (e) { log('GitHub advisories failed:', e.message); }
+  let radarOk = false;
+  try { radarOk = await buildRadar({ root: ROOT, log }); } catch (e) { log('Internet pulse failed:', e.message); }
 
   let plugins = [];
   // HIDE_SECTIONS=plugins (set by the GitHub workflow) turns the Tenable section off for that site.
@@ -779,7 +783,10 @@ async function main() {
   if (world) await writeJSON(path.join(OUT, 'world.json'), world);
   await writeJSON(path.join(OUT, 'supply.json'), { generated, advisories: supply });
   const st = Object.fromEntries(status.map(s => [s.n, s]));
-  if (ransomware) { try { await syncFlags(new Set([...(ransomware.totals?.countriesYtd || []).map(c => c[0]), ...ransomware.recent.map(v => v.c)])); } catch (e) { log('Flags failed:', e.message); } }
+  // Flags for ransomware countries and the countries in the Internet pulse section
+  const radarCc = [];
+  if (radarOk) { const r = await readJSON(path.join(OUT, 'radar.json'), {}); for (const k of ['l7Target', 'l7Origin', 'l3Target']) for (const x of r[k] || []) radarCc.push(x[0]); for (const o of r.outages || []) for (const l of o.loc) radarCc.push(l[0]); }
+  if (ransomware || radarCc.length) { try { await syncFlags(new Set([...(ransomware?.totals?.countriesYtd || []).map(c => c[0]), ...(ransomware?.recent || []).map(v => v.c), ...radarCc].filter(Boolean))); } catch (e) { log('Flags failed:', e.message); } }
   let icons = {};
   try { icons = await syncIcons(sources); log(`Site icons: ${Object.keys(icons).length}`); } catch (e) { log('Icons failed:', e.message); }
   await writeJSON(path.join(OUT, 'sources.json'), { generated, sources: sources.map(s => ({ n: s.name, c: s.cat, site: s.site, feed: s.feed || null, ic: icons[s.name], via: s.via, ...(st[s.name] ? { ok: st[s.name].ok, count: st[s.name].count, latest: st[s.name].latest, err: st[s.name].err, fb: st[s.name].fb } : {}) })) });

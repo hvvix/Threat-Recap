@@ -94,6 +94,7 @@
   {"name":"Full Disclosure","cat":"advisory","site":"https://seclists.org/fulldisclosure/","feed":"https://seclists.org/rss/fulldisclosure.rss","bulk":true},
   {"name":"Google Cloud Security Bulletins","cat":"advisory","site":"https://cloud.google.com/support/bulletins","feed":"https://cloud.google.com/feeds/google-cloud-security-bulletins.xml","bulk":true},
   {"name":"Palo Alto Networks Advisories","cat":"advisory","site":"https://security.paloaltonetworks.com/","feed":"https://security.paloaltonetworks.com/rss.xml","bulk":true},
+  {"name":"Cloudflare Zero Wire","cat":"advisory","site":"https://radar.cloudflare.com/security/zero-wire","feed":"https://radar.cloudflare.com/security/zero-wire/rss"},
   {"name":"SANS ISC","cat":"advisory","site":"https://isc.sans.edu/","feed":"https://isc.sans.edu/rssfeed_full.xml"},
   {"name":"Zero Day Initiative Blog","cat":"advisory","site":"https://www.zerodayinitiative.com/blog","feed":"https://www.zerodayinitiative.com/blog?format=rss"},
   {"name":"ZDI Published Advisories","cat":"advisory","site":"https://www.zerodayinitiative.com/advisories/published/","feed":"https://www.zerodayinitiative.com/rss/published/","bulk":true},

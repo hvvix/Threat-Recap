@@ -32,6 +32,7 @@ const TABS = [
   { id: 'ransomware', label: 'Ransomware' },
   { id: 'malware', label: 'Malware', list: s => !s.so && s.tg.includes('malware') && !s.b },
   { id: 'supply', label: 'Supply chain' },
+  { id: 'pulse', label: 'Internet pulse' },
   { id: 'research', label: 'Research', list: s => s.c === 'research' },
   { id: 'landmarks', label: 'Top of the decade' },
   { id: 'plugins', label: 'Tenable plugins' },
@@ -121,7 +122,7 @@ async function loadAll(fresh = false) {
   D.sources = sources.value || { sources: [] };
   D.meta = meta.value || { vendors: [], actors: [], groups: [], malware: [] };
   D.supply ||= { advisories: [] }; D.breaches ||= { hibp: [] }; D.incidents ||= { incidents: [] };
-  if (fresh) D.iocs = null;
+  if (fresh) { D.iocs = null; D.radar = undefined; }
   D.partial = true;
   index();
   D.rest = (async () => {
@@ -424,13 +425,14 @@ const ICON_PATHS = {
   eyeoff: '<path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A10 10 0 0 1 12 5c5 0 9 4.5 10 7-.4 1-1.2 2.3-2.4 3.6M6.1 6.1C4.2 7.4 2.8 9.3 2 12c1 2.5 5 7 10 7 1.7 0 3.3-.5 4.7-1.3"/>',
   flame: '<path d="M12 22c4 0 7-2.7 7-7 0-4-3-6-4-9-1 2-2 3-3.5 3.5C11 7 10 5 10 2 6 5 5 9 5 13c0 5 3 9 7 9z"/>',
   bolt: '<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>', list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  pulse: '<path d="M2 12h4l3-8 4 16 3-8h6"/>',
   history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',
 };
 const icon = name => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICON_PATHS[name] || ICON_PATHS.list}</svg>`;
 
 const NAV_GROUPS = [
   ['Your feed', ['latest', 'mystack', 'saved']],
-  ['Threats', ['developing', 'zeroday', 'breach', 'ransomware', 'apt', 'malware', 'supply']],
+  ['Threats', ['developing', 'zeroday', 'breach', 'ransomware', 'apt', 'malware', 'supply', 'pulse']],
   ['Intelligence', ['cves', 'landmarks', 'plugins', 'iocs', 'research', 'advisory', 'topics', 'categories', 'trends']],
   ['Tools', ['archive', 'patch', 'sources']],
 ];
@@ -445,6 +447,7 @@ const TAB_INFO = {
   apt: 'Nation-state and named threat-actor activity.',
   malware: 'Malware families, loaders, stealers and botnets.',
   supply: 'Malicious packages and software supply-chain attacks.',
+  pulse: 'Internet outages, DDoS and web attack trends, and BGP hijacks, from Cloudflare Radar.',
   cves: 'What to patch first, exploited CVEs and new exploits.',
   landmarks: 'The vulnerabilities that defined the last ten years, with live exploitation data.',
   plugins: 'New Nessus and Tenable scanner checks, with their CVEs.',
@@ -901,6 +904,70 @@ function renderRansomware() {
   <div class="subtabs">${subs.map(([v, l]) => `<button data-sub-rw="${v}" aria-pressed="${sub === v}">${l}</button>`).join('')}</div>${body}`;
   if ($('#map')) drawMap(+($('#map-day')?.value || 30));
   if ($('#live-map')) drawLiveMap();
+}
+
+// ----- Internet pulse (Cloudflare Radar snapshot, radar.json from radar.js) -----
+const RADAR = 'https://radar.cloudflare.com';
+function pbars(rows, what) {
+  const max = Math.max(1, ...rows.map(r => r.v));
+  return `<div class="bars">${rows.map(r => `<div class="bar-row"><div class="lbl" title="${esc(r.t)}">${r.h}</div><div class="bar-track" data-tip="${esc(r.t)}: ${r.v}% of ${esc(what)}"><div class="bar" style="width:${(r.v / max) * 82}%"></div><span class="bar-val">${r.v}%</span></div></div>`).join('')}</div>`;
+}
+const pCountry = rows => (rows || []).map(([cc, name, v]) => ({ h: `${flag(cc)} ${esc(name || regionName(cc))}`, t: name || regionName(cc), v }));
+const pSummary = rows => (rows || []).map(([k, v]) => ({ h: esc(k), t: k, v }));
+const asLabel = ([asn, name, cc] = []) => asn ? `${cc ? flag(cc) + ' ' : ''}${esc(name || 'Unknown network')} <span class="muted">AS${esc(asn)}</span>` : '<span class="muted">—</span>';
+const pWhen = t => t ? `<span title="${esc(fmtFull(t))}">${fmtAgo(t)}</span>` : '—';
+function renderPulse() {
+  if (D.radar === undefined) { $('#view').innerHTML = '<div class="empty">Loading Internet pulse…</div>'; lazy('radar', 'radar.json').then(() => { if (state.tab === 'pulse') render(); }); return; }
+  const R = D.radar;
+  if (!R) { $('#view').innerHTML = '<div class="empty">Internet pulse data is unavailable right now.</div>'; return; }
+  const now = Date.now();
+  const out = R.outages || [], ongoing = out.filter(o => !o.e || o.e > now);
+  const hj = R.hijacks || { events: [] }, lk = R.leaks || { events: [] };
+  const zw = D.news.stories.filter(s => s.s === 'Cloudflare Zero Wire' || s.r.some(r => r[0] === 'Cloudflare Zero Wire')).slice(0, 8);
+  const tiles = `<div class="rw-stats">
+    ${R.outages ? `<div class="tile"><div class="k">Internet outages</div><div class="v">${out.length}</div><div class="s">last 14 days${ongoing.length ? ` · ${ongoing.length} ongoing` : ''}</div></div>` : ''}
+    ${R.l7Target?.[0] ? `<div class="tile"><div class="k">Most attacked</div><div class="v" style="font-size:26px">${flag(R.l7Target[0][0])} ${esc(R.l7Target[0][1])}</div><div class="s">${R.l7Target[0][2]}% of web attacks, 7 days</div></div>` : ''}
+    ${R.l3Vector?.[0] ? `<div class="tile"><div class="k">Top DDoS method</div><div class="v" style="font-size:26px">${esc(R.l3Vector[0][0])}</div><div class="s">${R.l3Vector[0][1]}% of network attacks</div></div>` : ''}
+    ${R.hijacks ? `<div class="tile"><div class="k">BGP hijacks</div><div class="v">${hj.total}</div><div class="s">high confidence, 7 days</div></div>` : ''}
+    ${R.leaks ? `<div class="tile"><div class="k">Route leaks</div><div class="v">${lk.total}</div><div class="s">last 7 days</div></div>` : ''}
+  </div>`;
+  const outages = R.outages ? `<div class="panel"><div class="panel-head"><h2>Internet outages</h2><a href="${RADAR}/outage-center" target="_blank" rel="noopener">Outage center ↗</a></div>
+    <p class="desc">Country, regional and network outages Cloudflare confirmed in the last 14 days, with the cause when known.</p>
+    ${out.length ? `<div class="table-wrap"><table><thead><tr><th>Started</th><th>Where</th><th>Cause</th><th>What happened</th></tr></thead><tbody>
+    ${out.map(o => `<tr><td class="nowrap">${pWhen(o.s)}${!o.e || o.e > now ? ' <span class="sev HIGH">ongoing</span>' : ''}</td>
+      <td>${o.loc.map(([cc, n]) => `${flag(cc)} ${esc(n || regionName(cc))}`).join(', ') || '—'}${o.asn.length ? `<div class="muted" style="font-size:12.5px">${o.asn.map(([a, n]) => `${esc(n)} (AS${esc(a)})`).join(', ')}</div>` : ''}</td>
+      <td>${esc(o.cause || '—')}${o.type ? `<div class="muted" style="font-size:12.5px">${esc(o.type)}</div>` : ''}</td>
+      <td>${esc(o.desc || o.scope || '')}${o.link ? ` <a href="${url(o.link)}" target="_blank" rel="noopener">Source ↗</a>` : ''}</td></tr>`).join('')}
+    </tbody></table></div>` : '<p class="muted">No confirmed outages in the last 14 days.</p>'}</div>` : '';
+  const panels = [
+    R.l7Target?.length && `<div class="panel"><h2>Most attacked countries</h2><p class="desc">Where web (layer 7) attacks were aimed, last 7 days.</p>${pbars(pCountry(R.l7Target), 'web attack traffic')}</div>`,
+    R.l7Origin?.length && `<div class="panel"><h2>Where web attacks come from</h2><p class="desc">Source of attack traffic by country, last 7 days. Attackers route through other countries, so this is where the traffic left from.</p>${pbars(pCountry(R.l7Origin), 'web attack traffic')}</div>`,
+    R.l7Industry?.length && `<div class="panel"><h2>Most attacked industries</h2><p class="desc">Web attacks by the target's industry, last 7 days.</p>${pbars(pSummary(R.l7Industry.slice(0, 10)), 'web attack traffic')}</div>`,
+    R.l3Target?.length && `<div class="panel"><h2>DDoS: most targeted countries</h2><p class="desc">Network-layer (layer 3/4) DDoS attacks by target, last 7 days.</p>${pbars(pCountry(R.l3Target), 'network attack traffic')}</div>`,
+    R.l3Vector?.length && `<div class="panel"><h2>DDoS methods</h2><p class="desc">The techniques used in network-layer attacks, last 7 days.</p>${pbars(pSummary(R.l3Vector.slice(0, 8)), 'network attack traffic')}</div>`,
+    R.l3Industry?.length && `<div class="panel"><h2>DDoS: most targeted industries</h2><p class="desc">Network-layer attacks by the target's industry, last 7 days.</p>${pbars(pSummary(R.l3Industry.slice(0, 10)), 'network attack traffic')}</div>`,
+    R.l7Mitigation?.length && `<div class="panel"><h2>How web attacks were stopped</h2><p class="desc">Which Cloudflare protection blocked the request, last 7 days.</p>${pbars(pSummary(R.l7Mitigation), 'mitigated requests')}</div>`,
+  ].filter(Boolean);
+  const hijacks = R.hijacks ? `<div class="panel"><div class="panel-head"><h2>BGP hijacks</h2><a href="${RADAR}/routing" target="_blank" rel="noopener">Routing on Radar ↗</a></div>
+    <p class="desc">A network announced address space that belongs to someone else, which can send their traffic the wrong way. High-confidence events from the last 7 days; many are mistakes rather than attacks.</p>
+    ${hj.events.length ? `<div class="table-wrap"><table><thead><tr><th>When</th><th>Announced by</th><th>Address space owner</th><th>Prefixes</th><th>Confidence</th></tr></thead><tbody>
+    ${hj.events.slice(0, 15).map(e => `<tr><td class="nowrap">${pWhen(e.s)}</td><td>${asLabel(e.by)}</td><td>${e.victims.map(v => asLabel(v)).join('<br>') || '—'}</td>
+      <td style="font-family:var(--mono);font-size:12.5px">${e.prefixes.map(esc).join('<br>')}${e.np > e.prefixes.length ? `<br><span class="muted">+${e.np - e.prefixes.length} more</span>` : ''}</td><td>${esc(e.conf)}/10</td></tr>`).join('')}
+    </tbody></table></div>` : '<p class="muted">No high-confidence hijacks in the last 7 days.</p>'}</div>` : '';
+  const leaks = R.leaks ? `<div class="panel"><h2>Route leaks</h2>
+    <p class="desc">A network passed on routes it should have kept to itself, pulling other networks' traffic through it. Last 7 days.</p>
+    ${lk.events.length ? `<div class="table-wrap"><table><thead><tr><th>When</th><th>Leaking network</th><th>Prefixes</th><th>Origins</th><th>Seen by</th></tr></thead><tbody>
+    ${lk.events.slice(0, 15).map(e => `<tr><td class="nowrap">${pWhen(e.s)}${e.done ? '' : ' <span class="sev HIGH">ongoing</span>'}</td><td>${asLabel(e.by)}</td><td>${esc(e.prefixes)}</td><td>${esc(e.origins)}</td><td>${esc(e.peers)} peers</td></tr>`).join('')}
+    </tbody></table></div>` : '<p class="muted">No route leaks in the last 7 days.</p>'}</div>` : '';
+  const zero = `<div class="panel"><div class="panel-head"><h2>Zero Wire briefings</h2><a href="${RADAR}/security/zero-wire" target="_blank" rel="noopener">All briefings ↗</a></div>
+    <p class="desc">Cloudflare's briefings on critical vulnerabilities: what is known about exploitation, what to do now, and attack attempts seen on Cloudflare's network.</p>
+    ${zw.length ? storyList(zw, [], { groupByDay: false }) : '<p class="muted">No recent briefings yet.</p>'}</div>`;
+  $('#view').innerHTML = `<div class="note">From <a href="${RADAR}" target="_blank" rel="noopener">Cloudflare Radar</a>, updated ${fmtAgo(R.generated)}. Attack figures are shares of the attack traffic Cloudflare sees on its own network, not totals for the whole Internet.</div>
+  ${tiles}${outages}${panels.length ? `<div class="grid-2">${panels.join('')}</div>` : ''}${hijacks}${leaks}${zero}`;
+}
+// The section only shows when the build produced a Radar snapshot (needs the CLOUDFLARE_API_TOKEN secret).
+function checkPulse() {
+  lazy('radar', 'radar.json').then(r => { if (r || !TAB.pulse) return; const was = state.tab === 'pulse'; hideSections(['pulse']); renderTabs(); if (was) render(); });
 }
 
 // ----- Supply chain -----
@@ -1805,7 +1872,7 @@ function render() {
   state.focus = -1;
   const t = state.tab;
   if (TAB[t].list && !['supply'].includes(t)) renderListTab(t);
-  else ({ cves: renderCves, ransomware: renderRansomware, supply: renderSupply, patch: renderPatch, saved: renderSaved, sources: renderSources, trends: renderTrends, developing: renderDeveloping, plugins: renderPlugins, landmarks: renderLandmarks, archive: renderArchive, topics: renderTopics, categories: renderCategories })[t]();
+  else ({ cves: renderCves, ransomware: renderRansomware, supply: renderSupply, pulse: renderPulse, patch: renderPatch, saved: renderSaved, sources: renderSources, trends: renderTrends, developing: renderDeveloping, plugins: renderPlugins, landmarks: renderLandmarks, archive: renderArchive, topics: renderTopics, categories: renderCategories })[t]();
   $('#view').insertAdjacentHTML('afterbegin', pageHead(t));
   renderRail();
   const live = $('#live'); if (live) live.textContent = `${TAB[t].label}${state.q ? `, results for ${state.q}` : ''}: ${$$('#view .story').length || $$('#view tbody tr').length} items shown`;
@@ -2035,7 +2102,7 @@ function updateStatus() {
   try { await loadAll(); }
   catch (e) { $('#view').innerHTML = `<div class="empty">Couldn't load the news data (${esc(e.message)}). If you're running this yourself, run <code>node build.js</code> first.</div>`; return; }
   try { D.otd = await (await fetch('onthisday.json')).json(); } catch {}
-  render(); updateStatus();
+  render(); updateStatus(); checkPulse();
   // The rest of the data arrives in the background; refresh the view once, unless the reader is busy.
   D.rest.then(() => { if (!document.activeElement?.matches('input') && !$('#drawer-root').innerHTML) render(); updateStatus(); });
   const m = location.hash.match(/^#(CVE-\d{4}-\d+)$/i); if (m) openCve(m[1]);

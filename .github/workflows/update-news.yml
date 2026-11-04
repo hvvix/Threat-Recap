@@ -66,6 +66,8 @@ jobs:
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional: Cloudflare Radar data for the Internet pulse section (see docs/SETUP.md)
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
       # Private health check: tracks failing feeds in cache/health.json and alerts only the owner's device
       # (OWNER_PUSH_ID). Nothing is added to the site. Before push alerts so the owner's morning recap is current.
