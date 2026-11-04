@@ -11,6 +11,10 @@ on:
         description: "Also send a test push to every subscriber"
         type: boolean
         default: false
+      health_test:
+        description: "Also send a test health alert to the owner's device"
+        type: boolean
+        default: false
   push:
     branches: [main]
 
@@ -57,10 +61,27 @@ jobs:
           restore-keys: news-cache-
 
       - name: Build data
+        id: build
         run: node build.js
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Private health check: tracks failing feeds in cache/health.json and alerts only the owner's device
+      # (OWNER_PUSH_ID). Nothing is added to the site. Before push alerts so the owner's morning recap is current.
+      - name: Check feed health
+        if: vars.PUSH_API != '' && steps.build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          npm install --no-save --no-audit --no-fund --no-package-lock web-push@3
+          node health.js feeds
+          if [ "${{ inputs.health_test }}" = "true" ]; then node health.js --test; fi
+        env:
+          PUSH_API: ${{ vars.PUSH_API }}
+          VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
+          PUSH_ADMIN_TOKEN: ${{ secrets.PUSH_ADMIN_TOKEN }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          OWNER_PUSH_ID: ${{ secrets.OWNER_PUSH_ID }}
 
       # Push alerts to subscribed devices (see push.js and push/worker.js). Skipped until PUSH_API is set.
       # Runs before the cache is saved because it remembers what it already sent in cache/push-state.json.
@@ -76,12 +97,7 @@ jobs:
           VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
           PUSH_ADMIN_TOKEN: ${{ secrets.PUSH_ADMIN_TOKEN }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
-
-      - uses: actions/cache/save@v4
-        if: always()
-        with:
-          path: cache
-          key: news-cache-${{ github.run_id }}
+          OWNER_PUSH_ID: ${{ secrets.OWNER_PUSH_ID }}
 
       - name: Write site config
         run: |
@@ -125,3 +141,28 @@ jobs:
       - id: deploy-retry
         if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v4
+
+      # Private: tells the owner's device when an update fails (and when it works again). Runs last, so a
+      # failed build or a failed publish both count.
+      - name: Report update health
+        if: always() && vars.PUSH_API != ''
+        continue-on-error: true
+        run: |
+          [ -d node_modules/web-push ] || npm install --no-save --no-audit --no-fund --no-package-lock web-push@3
+          node health.js job
+        env:
+          JOB_STATUS: ${{ job.status }}
+          STAGE: ${{ steps.build.outcome == 'success' && 'publish' || 'build' }}
+          SITE_URL: ${{ vars.SITE_URL }}
+          PUSH_API: ${{ vars.PUSH_API }}
+          VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
+          PUSH_ADMIN_TOKEN: ${{ secrets.PUSH_ADMIN_TOKEN }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          OWNER_PUSH_ID: ${{ secrets.OWNER_PUSH_ID }}
+
+      # Saved last (also after failures) so push and health state are kept.
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: cache
+          key: news-cache-${{ github.run_id }}

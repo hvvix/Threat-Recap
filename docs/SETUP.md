@@ -103,3 +103,17 @@ Setup:
 6. Test: Actions → update-news → Run workflow → tick "Also send a test push to every subscriber".
 
 If you get your own domain, add it to `ALLOWED_ORIGINS` in `push/wrangler.toml` and redeploy the Worker.
+
+### Private health alerts for the owner (optional)
+
+`health.js` watches each update and alerts only your own device. Nothing appears on the site: the state is kept in the Actions cache (`cache/health.json`).
+
+- An update fails (while building or publishing): one alert, a reminder every 6 hours while it keeps failing, and one when it works again.
+- A feed fails 3 updates in a row for at least 6 hours: one alert per feed until it recovers (change with the `HEALTH_FEED_RUNS` / `HEALTH_FEED_HOURS` variables in the workflow).
+- If your device has the morning recap on, it gets an extra line such as `🩺 Site: 18/18 updates OK · 1 feed down: MDSec`.
+
+Setup (needs push alerts working):
+1. On your phone or computer, turn on push alerts on the site.
+2. Actions → update-news → Run workflow, tick "Also send a test push". The test message shows a **Device ID**.
+3. Add it as the secret `OWNER_PUSH_ID` (several devices: comma-separated).
+4. Run the workflow again with "Also send a test health alert" ticked to check it.

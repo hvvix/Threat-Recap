@@ -21,12 +21,16 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { healthLine } from './health.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const STATE = path.join(ROOT, 'cache', 'push-state.json');
 const DAY = 864e5;
 const PER_RUN = 4;                         // most alerts one subscriber gets from one update
 const { PUSH_API, PUSH_ADMIN_TOKEN, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY } = process.env;
+// The owner's devices (OWNER_PUSH_ID, comma-separated ID prefixes) also get a site health line in the morning recap.
+const OWNERS = (process.env.OWNER_PUSH_ID || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+const isOwner = s => OWNERS.some(o => s.id.startsWith(o));
 const SITE = (process.env.SITE_URL || 'https://hvvix.github.io/Threat-Recap/').replace(/\/?$/, '/');
 const log = (...a) => console.log('[push]', ...a);
 const readJSON = async (f, d) => { try { return JSON.parse(await fs.readFile(f, 'utf8')); } catch { return d; } };
@@ -68,6 +72,8 @@ const now = {
   claims: (rw.recent || []).filter(v => Date.now() - v.d < DAY).map(v => `${v.g}|${v.t}`),
 };
 const state = await readJSON(STATE, null);
+const health = healthLine(await readJSON(path.join(ROOT, 'cache', 'health.json'), null));
+const withHealth = (s, m) => (isOwner(s) && health ? { ...m, body: `${m.body}\n${health}` } : m);
 // First run, or a topic added since the last run: remember what exists without sending, so nobody
 // gets a burst of old alerts.
 const known = {};
@@ -166,11 +172,11 @@ if (process.argv.includes('--test')) {
   const latestSample = top.length ? { title: `📰 Sample: ${recent.length} stories in the last 24 h`, body: top.map(x => `• ${cut(x.t, 80)}`).join('\n'), url: SITE, tag: 'test-latest' } : null;
   let ok = 0, gone = 0, samples = 0;
   for (const s of all) {
-    if (!(await send(s, { title: 'Push alerts are working ✅', body: `This is a test from Threat Recap. Your alerts: ${s.topics.join(', ') || 'none'}.`, url: SITE, tag: 'test' }))) { gone++; continue; }
+    if (!(await send(s, { title: 'Push alerts are working ✅', body: `This is a test from Threat Recap. Your alerts: ${s.topics.join(', ') || 'none'}.\nDevice ID: ${s.id.slice(0, 12)}`, url: SITE, tag: 'test' }))) { gone++; continue; }
     ok++;
     if (s.topics.includes('latest') && latestSample && await send(s, latestSample)) samples++;
     const t = s.topics.includes('morning') && localTime(s.tz || 'UTC');
-    if (t && await send(s, { ...morningMsg(t.label), title: `☀️ Sample morning recap · ${t.label}`, tag: 'test-morning' })) samples++;
+    if (t && await send(s, withHealth(s, { ...morningMsg(t.label), title: `☀️ Sample morning recap · ${t.label}`, tag: 'test-morning' }))) samples++;
   }
   log(`test push: ${all.length} subscribers, delivered ${ok} tests + ${samples} samples, removed ${gone} expired`);
   process.exit(0);
@@ -192,7 +198,7 @@ for (const s of subs) {
   // The morning recap doesn't count towards the per-update limit.
   const t = s.topics.includes('morning') && alive && localTime(s.tz || 'UTC');
   if (t && t.hour >= 7 && t.hour < 11 && morningSent[s.id] !== t.date) {
-    const m = morningMsg(t.label);
+    const m = withHealth(s, morningMsg(t.label));
     if (process.env.PUSH_DEBUG) log(`  -> ${s.id.slice(0, 8)}: ${m.title}`);
     if (await send(s, m)) { morningSent[s.id] = t.date; mornings++; } else removed++;
   }
