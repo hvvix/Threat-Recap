@@ -1100,8 +1100,8 @@ function renderSources() {
       if (q) rows = rows.filter(s => s.n.toLowerCase().includes(q));
       if (!rows.length) return '';
       if (c !== 'tool') rows.sort((a, b) => (day[b.n] || 0) - (day[a.n] || 0) || (b.latest || 0) - (a.latest || 0));
-      return `<div class="panel"><h2>${label} <span class="muted" style="font-weight:400">(${rows.length})</span></h2><div class="table-wrap"><table><thead><tr><th>Source</th>${c === 'tool' ? '' : '<th>Today</th><th>Latest post</th><th>Status</th><th></th>'}</tr></thead><tbody>
-      ${rows.map(s => `<tr><td class="nowrap"><span class="srcname">${avatar(s.n)}<a href="${url(s.site)}" target="_blank" rel="noopener">${esc(s.n)}</a>${s.via ? ` <span class="muted" style="font-size:12px">via ${/ifin/.test(s.via) ? 'ifin' : esc(s.via)}</span>` : ''}</span></td>${c === 'tool' ? '' : `<td class="num">${day[s.n] ? `<button class="linkish" data-q="source:&quot;${esc(s.n)}&quot;" data-tab-go="latest"><b>${day[s.n]}</b></button>` : '<span class="muted">0</span>'}</td><td class="nowrap">${s.latest ? `<span title="${esc(fmtFull(s.latest))}">${fmtAgo(s.latest)}</span>` : '<span class="muted">—</span>'}</td><td class="nowrap">${s.feed ? (s.ok ? `<span class="status ok"></span>OK${s.fb ? ` <span class="muted" title="Its own feed is unreachable from our servers (${esc(s.fb)}), so headlines come through ${esc(s.fb.split(' (')[0])}; links open the article via a redirect.">· via ${esc(s.fb.split(' (')[0])}</span>` : ''}` :`<span class="status fail"></span>Failing${s.err ? ` <span class="muted">(${esc(s.err)})</span>` : ''}`) : '<span class="status none"></span>No feed'}</td><td class="nowrap">${s.feed ? `<a href="${url(s.feed)}" target="_blank" rel="noopener">RSS</a> · ` : ''}<button class="linkish" data-q="source:&quot;${esc(s.n)}&quot;" data-tab-go="latest">Stories</button></td>`}</tr>`).join('')}
+      return `<div class="panel"><h2>${label} <span class="muted" style="font-weight:400">(${rows.length})</span></h2><div class="table-wrap"><table><thead><tr><th>Source</th>${c === 'tool' ? '' : '<th>Today</th><th>Latest post</th><th></th>'}</tr></thead><tbody>
+      ${rows.map(s => `<tr><td class="nowrap"><span class="srcname">${avatar(s.n)}<a href="${url(s.site)}" target="_blank" rel="noopener">${esc(s.n)}</a>${s.via ? ` <span class="muted" style="font-size:12px">via ${/ifin/.test(s.via) ? 'ifin' : esc(s.via)}</span>` : ''}</span></td>${c === 'tool' ? '' : `<td class="num">${day[s.n] ? `<button class="linkish" data-q="source:&quot;${esc(s.n)}&quot;" data-tab-go="latest"><b>${day[s.n]}</b></button>` : '<span class="muted">0</span>'}</td><td class="nowrap">${s.latest ? `<span title="${esc(fmtFull(s.latest))}">${fmtAgo(s.latest)}</span>` : '<span class="muted">—</span>'}</td><td class="nowrap">${s.feed ? `<a href="${url(s.feed)}" target="_blank" rel="noopener">RSS</a> · ` : ''}<button class="linkish" data-q="source:&quot;${esc(s.n)}&quot;" data-tab-go="latest">Stories</button></td>`}</tr>`).join('')}
       </tbody></table></div></div>`;
     }).join('');
 }
@@ -2085,8 +2085,8 @@ setInterval(() => { if (!document.hidden) $$('time[datetime]').forEach(t => { t.
 function updateStatus() {
   if (!D.news) return;
   const src = D.sources.sources || [];
-  const fed = src.filter(s => s.feed), ok = fed.filter(s => s.ok);
-  $('#gen-status').innerHTML = `Updated ${fmtAgo(D.news.generated)} (${esc(fmtFull(D.news.generated))}) · ${ok.length}/${fed.length} feeds OK${fed.length - ok.length ? ` · <button class="linkish" data-tab-go="sources">${fed.length - ok.length} failing</button>` : ''}`;
+  const fed = src.filter(s => s.feed);
+  $('#gen-status').innerHTML = `Updated ${fmtAgo(D.news.generated)} (${esc(fmtFull(D.news.generated))})`;
   $('#src-count').textContent = fed.length;
 }
 

@@ -75,10 +75,10 @@ async function main() {
   const out = [];
 
   if (mode === 'feeds') {
-    const src = await readJSON(path.join(ROOT, 'public', 'data', 'sources.json'), null);
-    if (!src || now - src.generated > HOUR) { log('no fresh sources.json; feeds not checked'); process.exit(0); }
+    const src = await readJSON(path.join(ROOT, 'cache', 'feed-status.json'), null);
+    if (!src || now - src.generated > HOUR) { log('no fresh feed-status.json; feeds not checked'); process.exit(0); }
     const seen = new Set(), recovered = [];
-    for (const s of src.sources.filter(x => x.feed && 'ok' in x)) {
+    for (const s of src.sources) {
       seen.add(s.n);
       const f = state.feeds[s.n];
       if (s.ok) { if (f?.alerted) recovered.push(s.n); delete state.feeds[s.n]; continue; }
@@ -93,7 +93,7 @@ async function main() {
     }
     if (recovered.length) log(`recovered: ${recovered.length} feed(s)`);
     const failing = Object.values(state.feeds).filter(f => f.streak >= RUNS).length;
-    log(`${src.sources.filter(x => x.feed).length} feeds · ${Object.keys(state.feeds).length} failed this update · ${failing} failing ${RUNS}+ updates in a row · ${down.length} new alert(s)`);
+    log(`${src.sources.length} feeds · ${Object.keys(state.feeds).length} failed this update · ${failing} failing ${RUNS}+ updates in a row · ${down.length} new alert(s)`);
   }
 
   if (mode === 'job') {
